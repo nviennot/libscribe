@@ -21,18 +21,27 @@
 #ifndef _SCRIBE_H
 #define _SCRIBE_H
 
-typedef int scribe_ctx_t;
+typedef struct scribe_context {
+	int dev;
+} scribe_context_t;
 
 /* Create a scribe context to use the record/replay features
- * On success, scribe_ctx_create() returns 0 and you can start using scribe
- * On error, it returns an error number, and the contents of *scribe are
- * undefined.
- * Errors: EACCES, ENOENT: the scribe device couldn't be opened.
+ * On success, scribe_context_create() returns 0 and you can start using scribe
+ * On error, it returns -1, and the contents of *ctx are undefined, and errno
+ * is set appropriately.
  */
-int scribe_ctx_create(scribe_ctx_t *scribe_ctx);
+int scribe_context_create(scribe_context_t **pctx);
 
 /* Destroy a scribe context */
-int scribe_ctx_destroy(scribe_ctx_t scribe_ctx);
+int scribe_context_destroy(scribe_context_t *ctx);
 
+/* Start the recording with a command line
+ * Note that if the process cannot be executed, it will still report
+ * a success, and your recording will contains a failed execve()
+ */
+int scribe_start_recording(scribe_context_t *ctx, char *const *argv);
+
+/* Wait for things to happen */
+int scribe_wait(scribe_context_t *ctx);
 
 #endif /*_SCRIBE_H */
