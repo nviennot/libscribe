@@ -35,11 +35,17 @@ int scribe_context_create(scribe_context_t **pctx);
 /* Destroy a scribe context */
 int scribe_context_destroy(scribe_context_t *ctx);
 
+
+
+#define RECORD			1
+#define REPLAY			2
+#define CUSTOM_INIT_PROCESS	4
+
 /* Start the recording with a command line
  * Note that if the process cannot be executed, it will still report
  * a success, and your recording will contains a failed execve()
  */
-int scribe_start_recording(scribe_context_t *ctx, char *const *argv);
+int scribe_start(scribe_context_t *ctx, int flags, char *const *argv);
 
 /* Wait for things to happen */
 int scribe_wait(scribe_context_t *ctx);

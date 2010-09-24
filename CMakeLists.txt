@@ -1,7 +1,13 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-PROJECT(SCRIBE C)
-ADD_DEFINITIONS(-Wall -O2)
-INCLUDE_DIRECTORIES(include)
-ADD_LIBRARY(scribe SHARED src/context.c src/clone_x86_32.c)
-INSTALL(TARGETS scribe LIBRARY DESTINATION /usr/lib)
-INSTALL(FILES include/scribe.h DESTINATION /usr/include)
+cmake_minimum_required(VERSION 2.6)
+project(scribe C)
+add_definitions(-Wall -O2 -g)
+include_directories(include)
+
+add_library(scribe SHARED src/context.c src/clone_x86_32.c)
+
+add_executable(scribe_init src/init_process.c)
+install(TARGETS scribe scribe_init
+	LIBRARY DESTINATION /usr/lib
+	RUNTIME DESTINATION /usr/bin
+)
+install(FILES include/scribe.h DESTINATION /usr/include)

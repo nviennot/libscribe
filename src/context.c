@@ -32,17 +32,20 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
+#include <sys/mount.h>
 #include <signal.h>
+#include <limits.h>
 
 #include <scribe.h>
 #include "eclone.h"
 
 #define SCRIBE_DEV_NAME "/dev/scribe"
 
-#define SCRIBE_IO_MAGIC			0xFF
-#define SCRIBE_IO_START_RECORDING	_IOR(SCRIBE_IO_MAGIC,	1, int)
-#define SCRIBE_IO_START_REPLAYING	_IOR(SCRIBE_IO_MAGIC,	2, int)
-#define SCRIBE_IO_REQUEST_STOP		_IO(SCRIBE_IO_MAGIC,	3)
+#define SCRIBE_RECORD		0x00000001
+#define SCRIBE_REPLAY		0x00000002
+#define SCRIBE_IO_MAGIC		0xFF
+#define SCRIBE_IO_START_ON_EXEC	_IOR(SCRIBE_IO_MAGIC,	1, int)
+#define SCRIBE_IO_REQUEST_STOP	_IO(SCRIBE_IO_MAGIC,	2)
 
 int scribe_context_create(scribe_context_t **pctx)
 {
@@ -67,77 +70,75 @@ int scribe_context_destroy(scribe_context_t *ctx)
 {
 	if (close(ctx->dev))
 		return -1;
+	free(ctx);
 	return 0;
 }
 
 struct child_args {
 	scribe_context_t *ctx;
+	int flags;
 	char *const *argv;
 };
 
-#define STACK_SIZE 4*4096
-#define CHILD_PID 2
-
-static int child_loader(void *_fn_args)
-{
-	struct child_args *fn_args = _fn_args;
-	kill(CHILD_PID, SIGSTOP);
-	return execvp(fn_args->argv[0], fn_args->argv);
-}
 
 static int init_process(void *_fn_args)
 {
 	struct child_args *fn_args = _fn_args;
-	scribe_context_t *ctx = fn_args->ctx;
-	struct clone_args clone_args;
-	pid_t child_pid;
-	char *stack;
-	int status = 0;
+	int dev = fn_args->ctx->dev;
 
-	stack = malloc(STACK_SIZE);
-	if (!stack)
-		return -1;
+	/* mount a fresh new /proc */
+	umount2("/proc", MNT_DETACH);
+	mount("proc", "/proc", "proc", 0, NULL);
 
-	/* FIXME remount all the 'proc' mounted file systems */
+	if (ioctl(dev, SCRIBE_IO_START_ON_EXEC, fn_args->flags))
+		return 1;
 
-	memset(&clone_args, 0, sizeof(clone_args));
-	child_pid = CHILD_PID;
-	clone_args.nr_pids = 1;
-	clone_args.child_stack = (unsigned long)stack;
-	clone_args.child_stack_size = STACK_SIZE;
-	child_pid = eclone(child_loader, _fn_args, 0, &clone_args, &child_pid);
-
-	/* Wait for the child to be asleep */
-	while (!WIFSTOPPED(status)) {
-		if (waitpid(-1, &status, WUNTRACED | __WALL) < 0)
-			return -1;
-	}
-
-	/* Now we start recording: when the child wakes up, it will
-	 * be recorded and starting the execve()
+	/* close the scribe device, so that it doesn't appear in the
+	 * child's process space
 	 */
-	if (ioctl(ctx->dev, SCRIBE_IO_START_RECORDING, child_pid) < 0)
-		return -1;
-	kill(child_pid, SIGCONT);
+	close(dev);
 
-	/* doing the init process in the new namespace */
-	while (waitpid(-1, &status, __WALL) >= 0)
-		;
-	return 0;
+	execvp(fn_args->argv[0], fn_args->argv);
+	return 1;
 }
 
-int scribe_start_recording(scribe_context_t *ctx, char *const *argv)
+#define STACK_SIZE 4*4096
+
+int scribe_start(scribe_context_t *ctx, int flags, char *const *argv)
 {
-	struct child_args fn_args = { .ctx = ctx, .argv = argv };
+	struct child_args fn_args = { .ctx = ctx, .flags = flags, .argv = argv };
+	char **new_argv = NULL;
 	pid_t init_pid;
-	int status = 0;
+	int clone_flags;
 	char *stack;
+	int argc, i;
+
+
+	if (!(flags & CUSTOM_INIT_PROCESS)) {
+		/* We'll use the default init process for scribe
+		 * which is scribe_init
+		 */
+		for (argc = 0; argv[argc]; argc++);
+		argc++;
+		new_argv = malloc(sizeof(*new_argv) * argc);
+		if (!new_argv)
+			return -1;
+		new_argv[0] = "scribe_init";
+		for (i = 1; i < argc; i++)
+			new_argv[i] = argv[i-1];
+		fn_args.argv = new_argv;
+	}
 
 	stack = malloc(STACK_SIZE);
-	if (!stack)
+	if (!stack) {
+		free(new_argv);
 		return -1;
-	init_pid = clone(init_process, stack + STACK_SIZE,
-			CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD, &fn_args);
+	}
+	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD;
+	init_pid = clone(init_process, stack + STACK_SIZE, clone_flags, &fn_args);
+	free(stack);
+	free(new_argv);
+
 	if (init_pid < 0)
 		return -1;
 
@@ -145,7 +146,6 @@ int scribe_start_recording(scribe_context_t *ctx, char *const *argv)
 	 * Upon reception of a SIGCHLD, we want to return an error,
 	 * it means the init process failed
 	 */
-
 	return 0;
 }
 

@@ -44,6 +44,7 @@ int eclone(int (*fn)(void *), void *fn_arg, int clone_flags_low,
 					    clone_args->child_stack_size);
 		*--newstack = fn_arg;
 		*--newstack = fn;
+		--newstack; /* room for pushed ebx */
 	} else
 		newstack = (void **)0;
 
@@ -55,6 +56,7 @@ int eclone(int (*fn)(void *), void *fn_arg, int clone_flags_low,
 		"pushl %%ebx\n\t"      /* ebx needs to be saved for -fPIC code */
 		"movl %3,%%ebx\n\t"
 		"int $0x80\n\t"	       /* Linux/i386 system call */
+		"popl %%ebx\n\t"
 		"testl %0,%0\n\t"      /* check return value */
 		"jne 1f\n\t"	       /* jump if parent */
 		"popl %%edx\n\t"       /* get subthread function */
@@ -62,7 +64,6 @@ int eclone(int (*fn)(void *), void *fn_arg, int clone_flags_low,
 		"movl %2,%0\n\t"
 		"int $0x80\n"	       /* exit system call: exit subthread */
 		"1:\n\t"
-		"popl %%ebx\n\t"
 		:"=a" (retval)
 		:"0" (__NR_eclone), "i" (__NR_exit),
 		 "r" (clone_flags_low),	/* flags -> 1st (ebx) */
