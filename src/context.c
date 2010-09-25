@@ -41,11 +41,14 @@
 
 #define SCRIBE_DEV_NAME "/dev/scribe"
 
+#define SCRIBE_IDLE		0x00000000
 #define SCRIBE_RECORD		0x00000001
 #define SCRIBE_REPLAY		0x00000002
-#define SCRIBE_IO_MAGIC		0xFF
-#define SCRIBE_IO_START_ON_EXEC	_IOR(SCRIBE_IO_MAGIC,	1, int)
-#define SCRIBE_IO_REQUEST_STOP	_IO(SCRIBE_IO_MAGIC,	2)
+#define SCRIBE_STOP		0x00000004
+#define SCRIBE_DEVICE_NAME		"scribe"
+#define SCRIBE_IO_MAGIC			0xFF
+#define SCRIBE_IO_SET_STATE		_IOR(SCRIBE_IO_MAGIC,	1, int)
+#define SCRIBE_IO_ATTACH_ON_EXEC	_IOR(SCRIBE_IO_MAGIC,	2, int)
 
 int scribe_context_create(scribe_context_t **pctx)
 {
@@ -76,7 +79,6 @@ int scribe_context_destroy(scribe_context_t *ctx)
 
 struct child_args {
 	scribe_context_t *ctx;
-	int flags;
 	char *const *argv;
 };
 
@@ -90,7 +92,7 @@ static int init_process(void *_fn_args)
 	umount2("/proc", MNT_DETACH);
 	mount("proc", "/proc", "proc", 0, NULL);
 
-	if (ioctl(dev, SCRIBE_IO_START_ON_EXEC, fn_args->flags))
+	if (ioctl(dev, SCRIBE_IO_ATTACH_ON_EXEC, 1))
 		return 1;
 
 	/* close the scribe device, so that it doesn't appear in the
@@ -106,13 +108,21 @@ static int init_process(void *_fn_args)
 
 int scribe_start(scribe_context_t *ctx, int flags, char *const *argv)
 {
-	struct child_args fn_args = { .ctx = ctx, .flags = flags, .argv = argv };
+	struct child_args fn_args = { .ctx = ctx, .argv = argv };
 	char **new_argv = NULL;
 	pid_t init_pid;
 	int clone_flags;
+	int ctx_state;
 	char *stack;
 	int argc, i;
 
+	ctx_state = 0;
+	ctx_state |= flags & RECORD ? SCRIBE_RECORD : 0;
+	ctx_state |= flags & REPLAY ? SCRIBE_REPLAY : 0;
+	if (!ctx_state) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	if (!(flags & CUSTOM_INIT_PROCESS)) {
 		/* We'll use the default init process for scribe
@@ -134,18 +144,21 @@ int scribe_start(scribe_context_t *ctx, int flags, char *const *argv)
 		free(new_argv);
 		return -1;
 	}
+	if (ioctl(ctx->dev, SCRIBE_IO_SET_STATE, ctx_state)) {
+		free(new_argv);
+		free(stack);
+		return 1;
+	}
 	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD;
 	init_pid = clone(init_process, stack + STACK_SIZE, clone_flags, &fn_args);
 	free(stack);
 	free(new_argv);
 
-	if (init_pid < 0)
+	if (init_pid < 0) {
+		ioctl(ctx->dev, SCRIBE_IO_SET_STATE, SCRIBE_IDLE);
 		return -1;
+	}
 
-	/* FIXME Need a way to wait for the recording to start.
-	 * Upon reception of a SIGCHLD, we want to return an error,
-	 * it means the init process failed
-	 */
 	return 0;
 }
 
