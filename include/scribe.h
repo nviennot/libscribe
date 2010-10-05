@@ -21,6 +21,8 @@
 #ifndef _SCRIBE_H
 #define _SCRIBE_H
 
+#include <linux/scribe_api.h>
+
 typedef struct scribe_context {
 	int dev;
 } scribe_context_t;
