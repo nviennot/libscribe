@@ -25,31 +25,33 @@
 
 typedef struct scribe_context {
 	int dev;
+	void (*on_idle) (struct scribe_context *ctx, int error);
 } scribe_context_t;
 
-/* Create a scribe context to use the record/replay features
+/*
+ * Create a scribe context to use the record/replay features
  * On success, scribe_context_create() returns 0 and you can start using scribe
  * On error, it returns -1, and the contents of *ctx are undefined, and errno
  * is set appropriately.
+ * Once the context is created, you may set your callbacks.
  */
 int scribe_context_create(scribe_context_t **pctx);
 
 /* Destroy a scribe context */
 int scribe_context_destroy(scribe_context_t *ctx);
 
-
-
-#define RECORD			1
-#define REPLAY			2
-#define CUSTOM_INIT_PROCESS	4
-
-/* Start the recording with a command line
- * Note that if the process cannot be executed, it will still report
- * a success, and your recording will contains a failed execve()
+/*
+ * Start record/replay with a command line.
+ * The function returns when the record/replay is over.
  */
-int scribe_start(scribe_context_t *ctx, int flags, char *const *argv);
+#define CUSTOM_INIT_PROCESS	1
+int scribe_record(scribe_context_t *ctx, int flags, int log_fd, char *const *argv);
+int scribe_replay(scribe_context_t *ctx, int flags, int log_fd, char *const *argv);
 
-/* Wait for things to happen */
-int scribe_wait(scribe_context_t *ctx);
+/*
+ * Abort the record: It will stop the recording ASAP.
+ * Abort the replay: It will go live when it can.
+ */
+int scribe_stop(scribe_context_t *ctx);
 
 #endif /*_SCRIBE_H */

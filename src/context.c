@@ -39,16 +39,7 @@
 #include <scribe.h>
 #include "eclone.h"
 
-#define SCRIBE_DEV_NAME "/dev/scribe"
-
-#define SCRIBE_IDLE		0x00000000
-#define SCRIBE_RECORD		0x00000001
-#define SCRIBE_REPLAY		0x00000002
-#define SCRIBE_STOP		0x00000004
-#define SCRIBE_DEVICE_NAME		"scribe"
-#define SCRIBE_IO_MAGIC			0xFF
-#define SCRIBE_IO_SET_STATE		_IOR(SCRIBE_IO_MAGIC,	1, int)
-#define SCRIBE_IO_ATTACH_ON_EXEC	_IOR(SCRIBE_IO_MAGIC,	2, int)
+#define SCRIBE_DEV_PATH "/dev/" SCRIBE_DEVICE_NAME
 
 int scribe_context_create(scribe_context_t **pctx)
 {
@@ -57,10 +48,11 @@ int scribe_context_create(scribe_context_t **pctx)
 	ctx = malloc(sizeof(*ctx));
 	if (!ctx)
 		return -1;
+	memset(ctx, 0, sizeof(*ctx));
 
-	ctx->dev = open(SCRIBE_DEV_NAME, O_RDWR);
+	ctx->dev = open(SCRIBE_DEV_PATH, O_RDWR);
 	if (ctx->dev < 0) {
-		fprintf(stderr, "cannot open " SCRIBE_DEV_NAME "\n");
+		fprintf(stderr, "cannot open " SCRIBE_DEV_PATH "\n");
 		free(ctx);
 		return -1;
 	}
@@ -77,52 +69,108 @@ int scribe_context_destroy(scribe_context_t *ctx)
 	return 0;
 }
 
+/* Direct kernel commands. They are not exported */
+static int _cmd(scribe_context_t *ctx, void *event)
+{
+	size_t written, to_write;
+
+	to_write = sizeof_event((struct scribe_event *)event);
+	written = write(ctx->dev, event, to_write);
+
+	if (written < 0)
+		return -1;
+
+	if (written != to_write) {
+		errno = -EINVAL;
+		return -1;
+	}
+
+	return 0;
+}
+static int cmd_record(scribe_context_t *ctx, int log_fd)
+{
+	struct scribe_event_record e =
+		{.h = {.type = SCRIBE_EVENT_RECORD}, .log_fd = log_fd};
+	return _cmd(ctx, &e);
+}
+static int cmd_replay(scribe_context_t *ctx, int log_fd)
+{
+	struct scribe_event_replay e =
+		{.h = {.type = SCRIBE_EVENT_REPLAY}, .log_fd = log_fd};
+	return _cmd(ctx, &e);
+}
+static int cmd_stop(scribe_context_t *ctx)
+{
+	struct scribe_event_stop e = {.h = {.type = SCRIBE_EVENT_STOP}};
+	return _cmd(ctx, &e);
+}
+static int cmd_attach_on_execve(scribe_context_t *ctx, int enable)
+{
+	struct scribe_event_attach_on_execve e =
+		{.h = {.type = SCRIBE_EVENT_ATTACH_ON_EXECVE},
+			.enable = !!enable};
+	return _cmd(ctx, &e);
+}
+
+/* The init process launcher */
 struct child_args {
 	scribe_context_t *ctx;
 	char *const *argv;
 };
-
-
 static int init_process(void *_fn_args)
 {
 	struct child_args *fn_args = _fn_args;
-	int dev = fn_args->ctx->dev;
+	scribe_context_t *ctx = fn_args->ctx;
 
 	/* mount a fresh new /proc */
 	umount2("/proc", MNT_DETACH);
 	mount("proc", "/proc", "proc", 0, NULL);
 
-	if (ioctl(dev, SCRIBE_IO_ATTACH_ON_EXEC, 1))
+	if (cmd_attach_on_execve(ctx, 1))
 		return 1;
 
 	/* close the scribe device, so that it doesn't appear in the
 	 * child's process space
 	 */
-	close(dev);
+	close(ctx->dev);
 
 	execvp(fn_args->argv[0], fn_args->argv);
 	return 1;
 }
 
+static int notification_pump(scribe_context_t *ctx)
+{
+	char buffer[1024];
+	struct scribe_event *e = (struct scribe_event *)buffer;
+
+	for (;;) {
+		/* Events arrive one by one */
+		if (read(ctx->dev, buffer, sizeof(buffer)) < 0)
+			return -1;
+
+		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
+			struct scribe_event_context_idle *idle = (void*)buffer;
+			if (ctx->on_idle)
+				ctx->on_idle(ctx, idle->error);
+			return 0;
+		}
+	}
+
+	return 0;
+}
+
 #define STACK_SIZE 4*4096
 
-int scribe_start(scribe_context_t *ctx, int flags, char *const *argv)
+static int scribe_start(scribe_context_t *ctx, int action, int flags,
+			int log_fd, char *const *argv)
 {
 	struct child_args fn_args = { .ctx = ctx, .argv = argv };
 	char **new_argv = NULL;
 	pid_t init_pid;
 	int clone_flags;
-	int ctx_state;
 	char *stack;
 	int argc, i;
-
-	ctx_state = 0;
-	ctx_state |= flags & RECORD ? SCRIBE_RECORD : 0;
-	ctx_state |= flags & REPLAY ? SCRIBE_REPLAY : 0;
-	if (!ctx_state) {
-		errno = EINVAL;
-		return -1;
-	}
+	int ret;
 
 	if (!(flags & CUSTOM_INIT_PROCESS)) {
 		/* We'll use the default init process for scribe
@@ -144,28 +192,42 @@ int scribe_start(scribe_context_t *ctx, int flags, char *const *argv)
 		free(new_argv);
 		return -1;
 	}
-	if (ioctl(ctx->dev, SCRIBE_IO_SET_STATE, ctx_state)) {
+
+	if (action == SCRIBE_RECORD)
+		ret = cmd_record(ctx, log_fd);
+	else
+		ret = cmd_replay(ctx, log_fd);
+	if (ret) {
 		free(new_argv);
 		free(stack);
-		return 1;
+		return -1;
 	}
+
 	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD;
 	init_pid = clone(init_process, stack + STACK_SIZE, clone_flags, &fn_args);
 	free(stack);
 	free(new_argv);
 
 	if (init_pid < 0) {
-		ioctl(ctx->dev, SCRIBE_IO_SET_STATE, SCRIBE_IDLE);
+		scribe_stop(ctx);
 		return -1;
 	}
 
-	return 0;
+	return notification_pump(ctx);
 }
 
-int scribe_wait(scribe_context_t *ctx)
+int scribe_record(scribe_context_t *ctx, int flags, int log_fd, char *const *argv)
 {
-	int status;
-	while (waitpid(-1, &status, __WALL) >= 0);
-	return 0;
+	return scribe_start(ctx, SCRIBE_RECORD, flags, log_fd, argv);
+}
+
+int scribe_replay(scribe_context_t *ctx, int flags, int log_fd, char *const *argv)
+{
+	return scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd, argv);
+}
+
+int scribe_stop(scribe_context_t *ctx)
+{
+	return cmd_stop(ctx);
 }
 

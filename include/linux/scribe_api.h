@@ -119,7 +119,7 @@ struct scribe_event_stop {
 #define struct_SCRIBE_EVENT_CONTEXT_IDLE struct scribe_event_context_idle
 struct scribe_event_context_idle {
 	struct scribe_event h;
-	__u32 error;
+	__s32 error;
 } __attribute__((packed));
 
 
