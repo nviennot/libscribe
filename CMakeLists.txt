@@ -12,3 +12,9 @@ install(TARGETS scribe scribe_init
 )
 install(FILES include/scribe.h DESTINATION /usr/include)
 install(FILES include/linux/scribe_api.h DESTINATION /usr/include/linux)
+
+add_executable(record src/scribe.c)
+target_link_libraries(record scribe)
+
+add_executable(profiler src/profiler.c)
+target_link_libraries(profiler scribe)

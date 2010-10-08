@@ -20,22 +20,175 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <error.h>
+#include <errno.h>
 
 #include <linux/types.h>
 #include <scribe.h>
 
+static char *syscall_str[] = {
+	"restart_syscall", "exit", "fork", "read", "write", "open", "close",
+	"waitpid", "creat", "link", "unlink", "execve", "chdir", "time",
+	"mknod", "chmod", "lchown16", "ni_syscall", "stat", "lseek", "getpid",
+	"mount", "oldumount", "setuid16", "getuid16", "stime", "ptrace",
+	"alarm", "fstat", "pause", "utime", "ni_syscall", "ni_syscall",
+	"access", "nice", "ni_syscall", "sync", "kill", "rename", "mkdir",
+	"rmdir", "dup", "pipe", "times", "ni_syscall", "brk", "setgid16",
+	"getgid16", "signal", "geteuid16", "getegid16", "acct", "umount",
+	"ni_syscall", "ioctl", "fcntl", "ni_syscall", "setpgid", "ni_syscall",
+	"olduname", "umask", "chroot", "ustat", "dup2", "getppid", "getpgrp",
+	"setsid", "sigaction", "sgetmask", "ssetmask", "setreuid16",
+	"setregid16", "sigsuspend", "sigpending", "sethostname", "setrlimit",
+	"old_getrlimit", "getrusage", "gettimeofday", "settimeofday",
+	"getgroups16", "setgroups16", "old_select", "symlink", "lstat",
+	"readlink", "uselib", "swapon", "reboot", "old_readdir", "old_mmap",
+	"munmap", "truncate", "ftruncate", "fchmod", "fchown16",
+	"getpriority", "setpriority", "ni_syscall", "statfs", "fstatfs",
+	"ioperm", "socketcall", "syslog", "setitimer", "getitimer", "newstat",
+	"newlstat", "newfstat", "uname", "iopl", "vhangup", "ni_syscall",
+	"vm86old", "wait4", "swapoff", "sysinfo", "ipc", "fsync", "sigreturn",
+	"clone", "setdomainname", "newuname", "modify_ldt", "adjtimex",
+	"mprotect", "sigprocmask", "ni_syscall", "init_module",
+	"delete_module", "ni_syscall", "quotactl", "getpgid", "fchdir",
+	"bdflush", "sysfs", "personality", "ni_syscall", "setfsuid16",
+	"setfsgid16", "llseek", "getdents", "select", "flock", "msync",
+	"readv", "writev", "getsid", "fdatasync", "sysctl", "mlock",
+	"munlock", "mlockall", "munlockall", "sched_setparam",
+	"sched_getparam", "sched_setscheduler", "sched_getscheduler",
+	"sched_yield", "sched_get_priority_max", "sched_get_priority_min",
+	"sched_rr_get_interval", "nanosleep", "mremap", "setresuid16",
+	"getresuid16", "vm86", "ni_syscall", "poll", "nfsservctl",
+	"setresgid16", "getresgid16", "prctl", "rt_sigreturn", "rt_sigaction",
+	"rt_sigprocmask", "rt_sigpending", "rt_sigtimedwait",
+	"rt_sigqueueinfo", "rt_sigsuspend", "pread64", "pwrite64", "chown16",
+	"getcwd", "capget", "capset", "sigaltstack", "sendfile", "ni_syscall",
+	"ni_syscall", "vfork", "getrlimit", "mmap_pgoff", "truncate64",
+	"ftruncate64", "stat64", "lstat64", "fstat64", "lchown", "getuid",
+	"getgid", "geteuid", "getegid", "setreuid", "setregid", "getgroups",
+	"setgroups", "fchown", "setresuid", "getresuid", "setresgid",
+	"getresgid", "chown", "setuid", "setgid", "setfsuid", "setfsgid",
+	"pivot_root", "mincore", "madvise", "getdents64", "fcntl64",
+	"ni_syscall", "ni_syscall", "gettid", "readahead", "setxattr",
+	"lsetxattr", "fsetxattr", "getxattr", "lgetxattr", "fgetxattr",
+	"listxattr", "llistxattr", "flistxattr", "removexattr",
+	"lremovexattr", "fremovexattr", "tkill", "sendfile64", "futex",
+	"sched_setaffinity", "sched_getaffinity", "set_thread_area",
+	"get_thread_area", "io_setup", "io_destroy", "io_getevents",
+	"io_submit", "io_cancel", "fadvise64", "ni_syscall", "exit_group",
+	"lookup_dcookie", "epoll_create", "epoll_ctl", "epoll_wait",
+	"remap_file_pages", "set_tid_address", "timer_create",
+	"timer_settime", "timer_gettime", "timer_getoverrun", "timer_delete",
+	"clock_settime", "clock_gettime", "clock_getres", "clock_nanosleep",
+	"statfs64", "fstatfs64", "tgkill", "utimes", "fadvise64_64",
+	"ni_syscall", "mbind", "get_mempolicy", "set_mempolicy", "mq_open",
+	"mq_unlink", "mq_timedsend", "mq_timedreceive", "mq_notify",
+	"mq_getsetattr", "kexec_load", "waitid", "ni_syscall", "add_key",
+	"request_key", "keyctl", "ioprio_set", "ioprio_get", "inotify_init",
+	"inotify_add_watch", "inotify_rm_watch", "migrate_pages", "openat",
+	"mkdirat", "mknodat", "fchownat", "futimesat", "fstatat64",
+	"unlinkat", "renameat", "linkat", "symlinkat", "readlinkat",
+	"fchmodat", "faccessat", "pselect6", "ppoll", "unshare",
+	"set_robust_list", "get_robust_list", "splice", "sync_file_range",
+	"tee", "vmsplice", "move_pages", "getcpu", "epoll_pwait", "utimensat",
+	"signalfd", "timerfd_create", "eventfd", "fallocate",
+	"timerfd_settime", "timerfd_gettime", "signalfd4", "eventfd2",
+	"epoll_create1", "dup3", "pipe2", "inotify_init1", "preadv",
+	"pwritev", "rt_tgsigqueueinfo", "perf_event_open", "recvmmsg",
+	"eclone"
+};
+
+static char *error_str[] = {
+	"EPERM", "ENOENT", "ESRCH", "EINTR", "EIO", "ENXIO", "E2BIG",
+	"ENOEXEC", "EBADF", "ECHILD", "EAGAIN", "ENOMEM", "EACCES", "EFAULT",
+	"ENOTBLK", "EBUSY", "EEXIST", "EXDEV", "ENODEV", "ENOTDIR", "EISDIR",
+	"EINVAL", "ENFILE", "EMFILE", "ENOTTY", "ETXTBSY", "EFBIG", "ENOSPC",
+	"ESPIPE", "EROFS", "EMLINK", "EPIPE", "EDOM", "ERANGE", "EAGAIN",
+	"EINPROGRESS", "EALREADY", "ENOTSOCK", "EDESTADDRREQ", "EMSGSIZE",
+	"EPROTOTYPE", "ENOPROTOOPT", "EPROTONOSUPPORT", "ESOCKTNOSUPPORT",
+	"EOPNOTSUPP", "EPFNOSUPPORT", "EAFNOSUPPORT", "EADDRINUSE",
+	"EADDRNOTAVAIL", "ENETDOWN", "ENETUNREACH", "ENETRESET",
+	"ECONNABORTED", "ECONNRESET", "ENOBUFS", "EISCONN", "ENOTCONN",
+	"ESHUTDOWN", "ETOOMANYREFS", "ETIMEDOUT", "ECONNREFUSED", "ELOOP",
+	"ENAMETOOLONG", "EHOSTDOWN", "EHOSTUNREACH", "ENOTEMPTY", NULL,
+	"EUSERS", "EDQUOT", "ESTALE", "EREMOTE", NULL, NULL, NULL, NULL, NULL,
+	"ENOLCK", "ENOSYS", NULL, "ENOMSG", "EIDRM", "ENOSR", "ETIME",
+	"EBADMSG", "EPROTO", "ENODATA", "ENOSTR", "ECHRNG", "EL2NSYNC",
+	"EL3HLT", "EL3RST", "ENOPKG", "ELNRNG", "EUNATCH", "ENOCSI", "EL2HLT",
+	"EBADE", "EBADR", "EXFULL", "ENOANO", "EBADRQC", "EBADSLT", NULL,
+	"EBFONT", "ENONET", "ENOLINK", "EADV", "ESRMNT", "ECOMM", "EMULTIHOP",
+	"EDOTDOT", "EOVERFLOW", "ENOTUNIQ", "EBADFD", "EREMCHG", "EILSEQ",
+	"EUCLEAN", "ENOTNAM", "ENAVAIL", "EISNAM", "EREMOTEIO", "ELIBACC",
+	"ELIBBAD", "ELIBSCN", "ELIBMAX", "ELIBEXEC", "ERESTART", "ESTRPIPE",
+	"ENOMEDIUM", "EMEDIUMTYPE", "ECANCELED", "ENOKEY", "EKEYEXPIRED",
+	"EKEYREVOKED", "EKEYREJECTED", "EOWNERDEAD", "ENOTRECOVERABLE",
+	"ERFKILL"
+};
+
+static char *error_512_str[] = {
+	"ERESTARTSYS", "ERESTARTNOINTR", "ERESTARTNOHAND", "ENOIOCTLCMD",
+	"ERESTART_RESTARTBLOCK", NULL, NULL, NULL, NULL, "EBADHANDLE",
+	"ENOTSYNC", "EBADCOOKIE", "ENOTSUPP", "ETOOSMALL", "ESERVERFAULT",
+	"EBADTYPE", "EJUKEBOX", "EIOCBQUEUED", "EIOCBRETRY"
+};
+
+#define GET_STR(table, n) ({ 				\
+	char *str;					\
+	if (n < sizeof(table##_str)/sizeof(char*))	\
+		str = table##_str[n];			\
+	else str = NULL;				\
+	str; })
+
+static char *get_syscall_str(char *buffer, unsigned int n)
+{
+	char *str = GET_STR(syscall, n);
+	if (str)
+		return str;
+	sprintf(buffer, "syscall_%d", n);
+	return buffer;
+
+}
+
+#define MAX_ERRNO	4095
+#define IS_ERR_VALUE(x) ((x) >= (unsigned long)-MAX_ERRNO)
+static char *get_ret_str(char *buffer, long ret)
+{
+	char *str;
+	char perror_buf[512];
+	if (IS_ERR_VALUE((unsigned long)ret)) {
+		long err = -ret;
+		if (err >= 512)
+			str = GET_STR(error_512, err-512);
+		str = GET_STR(error, err-1);
+		sprintf(buffer, "%ld %s (%s)", ret, str,
+			strerror_r(err, perror_buf, sizeof(perror_buf)));
+	} else if ((unsigned long)ret < 0x100000) {
+		sprintf(buffer, "%ld", ret);
+	} else {
+		sprintf(buffer, "%p", (void*)ret);
+	}
+	return buffer;
+}
+
+
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
-
+#define DECL(t) struct_##t *e = (struct_##t *)event
 #define PRINT(t, fmt, ...)						\
 	if (event->type == t) {						\
-		struct_##t *e = (struct_##t *)event;			\
+		DECL(t);						\
 		snprintf(str, size, #t ": " fmt, __VA_ARGS__);		\
 	}								\
-
 	
 	PRINT(SCRIBE_EVENT_PID, "pid=%d", e->pid);
-	PRINT(SCRIBE_EVENT_SYSCALL, "syscall=%d, ret=%d", e->nr, e->ret);
+
+	if (event->type == SCRIBE_EVENT_SYSCALL) {
+		DECL(SCRIBE_EVENT_SYSCALL);
+		char buffer1[128];
+		char buffer2[128];
+		snprintf(str, size, "%s() = %s",
+			 get_syscall_str(buffer1, e->nr),
+			 get_ret_str(buffer2, e->ret));
+	}
 
 #undef PRINT
 
