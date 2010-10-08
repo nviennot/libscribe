@@ -54,4 +54,6 @@ int scribe_replay(scribe_context_t *ctx, int flags, int log_fd, char *const *arg
  */
 int scribe_stop(scribe_context_t *ctx);
 
+char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event);
+
 #endif /*_SCRIBE_H */
