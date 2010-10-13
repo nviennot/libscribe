@@ -13,14 +13,10 @@
 #define _LINUX_SCRIBE_API_H
 
 
-#ifdef __KERNEL__
-
 #include <linux/types.h>
+#ifdef __KERNEL__
 #include <linux/list.h>
-
 #else
-
-#include <sys/types.h>
 #ifndef __always_inline
 #define __always_inline inline
 #endif
@@ -71,10 +67,15 @@ struct scribe_event_pid {
 	__u32 pid;
 } __attribute__((packed));
 
+#define SCRIBE_DATA_INPUT		1
+#define SCRIBE_DATA_STRING		2
+#define SCRIBE_DATA_NON_DETERMINISTIC	4
+
 #define struct_SCRIBE_EVENT_DATA struct scribe_event_data
 struct scribe_event_data {
 	struct scribe_event h;
 	__u32 size;
+	__u8 data_type;
 	__u8 data[0];
 	__u32 ldata[0];
 } __attribute__((packed));
@@ -159,4 +160,3 @@ static inline size_t sizeof_event(struct scribe_event *event)
 }
 
 #endif /* _LINUX_SCRIBE_API_H_ */
-
