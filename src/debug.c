@@ -22,6 +22,7 @@
 #include <string.h>
 #include <error.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include <linux/types.h>
 #include <scribe.h>
@@ -169,28 +170,74 @@ static char *get_ret_str(char *buffer, long ret)
 	return buffer;
 }
 
+static char *escape_str(char *buf, size_t buf_size,
+			const void* _data, size_t data_size)
+{
+	const char *data = _data;
+	char *orig_buf = buf;
+	char c;
+	int i, s;
+
+	buf[0] = 0;
+	for (i = 0;
+	     i < data_size && buf_size > 0;
+	     i++, buf += s, buf_size -= s) {
+		c = data[i];
+#define PRINT(fmt, ...) s = snprintf(buf, buf_size, fmt, ##__VA_ARGS__)
+		switch (c) {
+		case '\n': PRINT("\\n"); break;
+		case '\t': PRINT("\\t"); break;
+		case '\0': PRINT("\\0"); break;
+		case '\\': PRINT("\\\\"); break;
+		default:
+			if (isgraph(c) || c == ' ')
+				PRINT("%c", c);
+			else
+				PRINT("\\x%02x", (unsigned char)c);
+			break;
+		}
+#undef PRINT
+	}
+
+	if (!buf_size)
+		strcpy(buf-4, "...");
+
+	return orig_buf;
+}
+
+static char *get_data_type_str(int type)
+{
+	switch(type) {
+		case 0: return "output";
+		case SCRIBE_DATA_INPUT: return "input";
+		case SCRIBE_DATA_INPUT | SCRIBE_DATA_STRING: return "input string";
+		case SCRIBE_DATA_NON_DETERMINISTIC: return "non-det output";
+		default: return "unkown";
+	}
+}
 
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
-#define DECL(t) struct_##t *e = (struct_##t *)event
-#define PRINT(t, fmt, ...)						\
+	char buffer1[4096];
+	char buffer2[4096];
+
+#define DECL_EVENT(t) struct_##t *e = (struct_##t *)event
+#define GENERIC_EVENT(t, fmt, ...)					\
 	if (event->type == t) {						\
-		DECL(t);						\
-		snprintf(str, size, #t ": " fmt, __VA_ARGS__);		\
-	}								\
-	
-	PRINT(SCRIBE_EVENT_PID, "pid=%d", e->pid);
-
-	if (event->type == SCRIBE_EVENT_SYSCALL) {
-		DECL(SCRIBE_EVENT_SYSCALL);
-		char buffer1[128];
-		char buffer2[128];
-		snprintf(str, size, "%s() = %s",
-			 get_syscall_str(buffer1, e->nr),
-			 get_ret_str(buffer2, e->ret));
+		DECL_EVENT(t);						\
+		snprintf(str, size, fmt, __VA_ARGS__);		\
+		return str;						\
 	}
+	GENERIC_EVENT(SCRIBE_EVENT_SYSCALL, "%s() = %s",
+		      get_syscall_str(buffer1, e->nr),
+		      get_ret_str(buffer2, e->ret))
+	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, size = %u, \"%s\"",
+		      get_data_type_str(e->data_type),
+		      e->size,
+		      escape_str(buffer1, 100, e->data, e->size))
+	GENERIC_EVENT(SCRIBE_EVENT_PID, "pid=%d", e->pid)
+#undef GENERIC_EVENT
 
-#undef PRINT
-
+	snprintf(str, size, "unkown event %d", event->type);
 	return str;
 }
