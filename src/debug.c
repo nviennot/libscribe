@@ -173,37 +173,68 @@ static char *get_ret_str(char *buffer, long ret)
 	return buffer;
 }
 
-static char *escape_str(char *buf, size_t buf_size,
+static char *escape_str(char *buf, ssize_t buf_size,
 			const void* _data, size_t data_size)
 {
 	const char *data = _data;
 	char *orig_buf = buf;
+	ssize_t orig_buf_size = buf_size;
 	char c;
+	long l;
 	int i, s;
+	int hex_count = 0;
 
-	buf[0] = 0;
+#define PRINT(fmt, ...) s = snprintf(buf, buf_size, fmt, ##__VA_ARGS__)
+	PRINT("\"");
+	buf += s;
+	buf_size -= s;
 	for (i = 0;
 	     i < data_size && buf_size > 0;
 	     i++, buf += s, buf_size -= s) {
 		c = data[i];
-#define PRINT(fmt, ...) s = snprintf(buf, buf_size, fmt, ##__VA_ARGS__)
 		switch (c) {
 		case '\n': PRINT("\\n"); break;
 		case '\t': PRINT("\\t"); break;
-		case '\0': PRINT("\\0"); break;
+		case '\0': PRINT("\\0"); hex_count++; break;
 		case '\\': PRINT("\\\\"); break;
 		default:
 			if (isgraph(c) || c == ' ')
 				PRINT("%c", c);
-			else
+			else {
 				PRINT("\\x%02x", (unsigned char)c);
+				hex_count++;
+			}
 			break;
 		}
-#undef PRINT
 	}
 
+	if (buf_size <= 0)
+		strcpy(buf-5, "...\"");
+	else
+		strcpy(buf, "\"");
+
+	if (hex_count <= i/4)
+		return orig_buf;
+
+	for (i = 0, buf_size = orig_buf_size, buf = orig_buf;
+	     i < data_size && buf_size > 0;
+	     buf += s, buf_size -= s) {
+		if ((data_size % sizeof(long)) == 0) {
+			l = *((long *)&data[i]);
+			if (sizeof(long) == 8)
+				PRINT("%s%016lx", i == 0 ? "" : " ", l);
+			else
+				PRINT("%s%08lx", i == 0 ? "" : " ", l);
+			i += sizeof(long);
+		} else {
+			c = data[i];
+			PRINT("%02x", (unsigned char)c);
+			i++;
+		}
+	}
 	if (!buf_size)
 		strcpy(buf-4, "...");
+#undef PRINT
 
 	return orig_buf;
 }
@@ -235,7 +266,7 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		      get_syscall_str(buffer1, e->nr),
 		      get_ret_str(buffer2, e->ret));
 	GENERIC_EVENT(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
-	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, size = %u, \"%s\"",
+	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, size = %u, %s",
 		      get_data_type_str(e->data_type),
 		      e->size,
 		      escape_str(buffer1, 100, e->data, e->size));
