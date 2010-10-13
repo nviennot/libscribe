@@ -157,11 +157,14 @@ static char *get_ret_str(char *buffer, long ret)
 	char perror_buf[512];
 	if (IS_ERR_VALUE((unsigned long)ret)) {
 		long err = -ret;
-		if (err >= 512)
+		if (err >= 512) {
 			str = GET_STR(error_512, err-512);
-		str = GET_STR(error, err-1);
-		sprintf(buffer, "%ld %s (%s)", ret, str,
-			strerror_r(err, perror_buf, sizeof(perror_buf)));
+			sprintf(buffer, "%ld %s", ret, str);
+		} else {
+			str = GET_STR(error, err-1);
+			sprintf(buffer, "%ld %s (%s)", ret, str,
+				strerror_r(err, perror_buf, sizeof(perror_buf)));
+		}
 	} else if ((unsigned long)ret < 0x100000) {
 		sprintf(buffer, "%ld", ret);
 	} else {
@@ -225,17 +228,18 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 #define GENERIC_EVENT(t, fmt, ...)					\
 	if (event->type == t) {						\
 		DECL_EVENT(t);						\
-		snprintf(str, size, fmt, __VA_ARGS__);		\
+		snprintf(str, size, fmt, ##__VA_ARGS__);		\
 		return str;						\
 	}
 	GENERIC_EVENT(SCRIBE_EVENT_SYSCALL, "%s() = %s",
 		      get_syscall_str(buffer1, e->nr),
-		      get_ret_str(buffer2, e->ret))
+		      get_ret_str(buffer2, e->ret));
+	GENERIC_EVENT(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
 	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, size = %u, \"%s\"",
 		      get_data_type_str(e->data_type),
 		      e->size,
-		      escape_str(buffer1, 100, e->data, e->size))
-	GENERIC_EVENT(SCRIBE_EVENT_PID, "pid=%d", e->pid)
+		      escape_str(buffer1, 100, e->data, e->size));
+	GENERIC_EVENT(SCRIBE_EVENT_PID, "pid=%d", e->pid);
 #undef GENERIC_EVENT
 
 	snprintf(str, size, "unkown event %d", event->type);
