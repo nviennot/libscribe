@@ -77,6 +77,7 @@ struct scribe_event_data {
 	struct scribe_event h;
 	__u32 size;
 	__u8 data_type;
+	__u32 user_ptr; /* FIXME 64 bit support ? */
 	__u8 data[0];
 	__u32 ldata[0];
 } __attribute__((packed));

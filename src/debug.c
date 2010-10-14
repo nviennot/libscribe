@@ -209,7 +209,7 @@ static char *escape_str(char *buf, ssize_t buf_size,
 	}
 
 	if (buf_size <= 0)
-		strcpy(buf-5, "...\"");
+		strcpy(buf-5+buf_size, "...\"");
 	else
 		strcpy(buf, "\"");
 
@@ -232,8 +232,8 @@ static char *escape_str(char *buf, ssize_t buf_size,
 			i++;
 		}
 	}
-	if (!buf_size)
-		strcpy(buf-4, "...");
+	if (buf_size <= 0)
+		strcpy(buf-4+buf_size, "...");
 #undef PRINT
 
 	return orig_buf;
@@ -266,8 +266,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		      get_syscall_str(buffer1, e->nr),
 		      get_ret_str(buffer2, e->ret));
 	GENERIC_EVENT(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
-	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, size = %u, %s",
+	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, ptr = %p, size = %u, %s",
 		      get_data_type_str(e->data_type),
+		      (void *)e->user_ptr,
 		      e->size,
 		      escape_str(buffer1, 100, e->data, e->size));
 	GENERIC_EVENT(SCRIBE_EVENT_PID, "pid=%d", e->pid);
