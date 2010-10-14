@@ -127,7 +127,7 @@ static int init_process(void *_fn_args)
 	mount("proc", "/proc", "proc", 0, NULL);
 
 	if (cmd_attach_on_execve(ctx, 1))
-		return 1;
+		goto bad;
 
 	/* close the scribe device, so that it doesn't appear in the
 	 * child's process space
@@ -135,6 +135,8 @@ static int init_process(void *_fn_args)
 	close(ctx->dev);
 
 	execvp(fn_args->argv[0], fn_args->argv);
+bad:
+	printf("Init failed. You probably want to ctrl+c\n");
 	return 1;
 }
 
@@ -178,12 +180,13 @@ static int scribe_start(scribe_context_t *ctx, int action, int flags,
 		 */
 		for (argc = 0; argv[argc]; argc++);
 		argc++;
-		new_argv = malloc(sizeof(*new_argv) * argc);
+		new_argv = malloc(sizeof(*new_argv) * (argc+1));
 		if (!new_argv)
 			return -1;
 		new_argv[0] = "scribe_init";
 		for (i = 1; i < argc; i++)
 			new_argv[i] = argv[i-1];
+		new_argv[i] = NULL;
 		fn_args.argv = new_argv;
 	}
 
