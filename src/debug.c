@@ -122,7 +122,7 @@ static char *error_str[] = {
 	"ELIBBAD", "ELIBSCN", "ELIBMAX", "ELIBEXEC", "ERESTART", "ESTRPIPE",
 	"ENOMEDIUM", "EMEDIUMTYPE", "ECANCELED", "ENOKEY", "EKEYEXPIRED",
 	"EKEYREVOKED", "EKEYREJECTED", "EOWNERDEAD", "ENOTRECOVERABLE",
-	"ERFKILL"
+	"ERFKILL", "EDIVERGE"
 };
 
 static char *error_512_str[] = {
@@ -246,6 +246,7 @@ static char *get_data_type_str(int type)
 		case SCRIBE_DATA_INPUT: return "input";
 		case SCRIBE_DATA_INPUT | SCRIBE_DATA_STRING: return "input string";
 		case SCRIBE_DATA_NON_DETERMINISTIC: return "non-det output";
+		case SCRIBE_DATA_INTERNAL: return "internal";
 		default: return "unkown";
 	}
 }

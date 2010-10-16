@@ -24,6 +24,8 @@
 #endif /* __KERNEL__ */
 
 
+#define EDIVERGE	139	/* Replay diverged */
+
 #define SCRIBE_IDLE		0x00000000
 #define SCRIBE_RECORD		0x00000001
 #define SCRIBE_REPLAY		0x00000002
@@ -52,6 +54,7 @@ enum scribe_event_type {
 struct scribe_event {
 #ifdef __KERNEL__
 	struct list_head node;
+	__u8 __align__[3];
 	char payload_offset[0];
 	/*
 	 * type must directly follow payload_offset,
@@ -69,16 +72,17 @@ struct scribe_event_pid {
 	__u32 pid;
 } __attribute__((packed));
 
-#define SCRIBE_DATA_INPUT		1
-#define SCRIBE_DATA_STRING		2
-#define SCRIBE_DATA_NON_DETERMINISTIC	4
+#define SCRIBE_DATA_INPUT		0x01
+#define SCRIBE_DATA_STRING		0x02
+#define SCRIBE_DATA_NON_DETERMINISTIC	0x04
+#define SCRIBE_DATA_INTERNAL		0x08
 
 #define struct_SCRIBE_EVENT_DATA struct scribe_event_data
 struct scribe_event_data {
 	struct scribe_event h;
 	__u32 size;
-	__u8 data_type;
 	__u32 user_ptr; /* FIXME 64 bit support ? */
+	__u8 data_type;
 	__u8 data[0];
 	__u32 ldata[0];
 } __attribute__((packed));
@@ -86,8 +90,8 @@ struct scribe_event_data {
 #define struct_SCRIBE_EVENT_SYSCALL struct scribe_event_syscall
 struct scribe_event_syscall {
 	struct scribe_event h;
-	__u16 nr;
 	__u32 ret; /* FIXME 64 bit support ? */
+	__u16 nr;
 } __attribute__((packed));
 
 #define struct_SCRIBE_EVENT_SYSCALL_END struct scribe_event_syscall_end
