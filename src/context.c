@@ -39,11 +39,16 @@
 #include <scribe.h>
 #include "eclone.h"
 
+struct scribe_context {
+	int dev;
+	struct scribe_operations ops;
+};
+
 #define SCRIBE_DEV_PATH "/dev/" SCRIBE_DEVICE_NAME
 
-int scribe_context_create(scribe_context_t **pctx)
+int scribe_context_create(scribe_context_t *pctx)
 {
-	scribe_context_t *ctx;
+	scribe_context_t ctx;
 
 	ctx = malloc(sizeof(*ctx));
 	if (!ctx)
@@ -61,7 +66,7 @@ int scribe_context_create(scribe_context_t **pctx)
 	return 0;
 }
 
-int scribe_context_destroy(scribe_context_t *ctx)
+int scribe_context_destroy(scribe_context_t ctx)
 {
 	if (close(ctx->dev))
 		return -1;
@@ -69,8 +74,14 @@ int scribe_context_destroy(scribe_context_t *ctx)
 	return 0;
 }
 
+int scribe_set_operations(scribe_context_t ctx, struct scribe_operations *ops)
+{
+	ctx->ops = *ops;
+	return 0;
+}
+
 /* Direct kernel commands. They are not exported */
-static int _cmd(scribe_context_t *ctx, void *event)
+static int _cmd(scribe_context_t ctx, void *event)
 {
 	size_t written, to_write;
 
@@ -87,24 +98,24 @@ static int _cmd(scribe_context_t *ctx, void *event)
 
 	return 0;
 }
-static int cmd_record(scribe_context_t *ctx, int log_fd)
+static int cmd_record(scribe_context_t ctx, int log_fd)
 {
 	struct scribe_event_record e =
 		{.h = {.type = SCRIBE_EVENT_RECORD}, .log_fd = log_fd};
 	return _cmd(ctx, &e);
 }
-static int cmd_replay(scribe_context_t *ctx, int log_fd)
+static int cmd_replay(scribe_context_t ctx, int log_fd)
 {
 	struct scribe_event_replay e =
 		{.h = {.type = SCRIBE_EVENT_REPLAY}, .log_fd = log_fd};
 	return _cmd(ctx, &e);
 }
-static int cmd_stop(scribe_context_t *ctx)
+static int cmd_stop(scribe_context_t ctx)
 {
 	struct scribe_event_stop e = {.h = {.type = SCRIBE_EVENT_STOP}};
 	return _cmd(ctx, &e);
 }
-static int cmd_attach_on_execve(scribe_context_t *ctx, int enable)
+static int cmd_attach_on_execve(scribe_context_t ctx, int enable)
 {
 	struct scribe_event_attach_on_execve e =
 		{.h = {.type = SCRIBE_EVENT_ATTACH_ON_EXECVE},
@@ -114,13 +125,13 @@ static int cmd_attach_on_execve(scribe_context_t *ctx, int enable)
 
 /* The init process launcher */
 struct child_args {
-	scribe_context_t *ctx;
+	scribe_context_t ctx;
 	char *const *argv;
 };
 static int init_process(void *_fn_args)
 {
 	struct child_args *fn_args = _fn_args;
-	scribe_context_t *ctx = fn_args->ctx;
+	scribe_context_t ctx = fn_args->ctx;
 
 	/* mount a fresh new /proc */
 	umount2("/proc", MNT_DETACH);
@@ -140,7 +151,7 @@ bad:
 	return 1;
 }
 
-static int notification_pump(scribe_context_t *ctx)
+static int notification_pump(scribe_context_t ctx)
 {
 	char buffer[1024];
 	struct scribe_event *e = (struct scribe_event *)buffer;
@@ -152,8 +163,8 @@ static int notification_pump(scribe_context_t *ctx)
 
 		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
 			struct scribe_event_context_idle *idle = (void*)buffer;
-			if (ctx->on_idle)
-				ctx->on_idle(ctx, idle->error);
+			if (ctx->ops.on_idle)
+				ctx->ops.on_idle(ctx, idle->error);
 			return 0;
 		}
 	}
@@ -163,7 +174,7 @@ static int notification_pump(scribe_context_t *ctx)
 
 #define STACK_SIZE 4*4096
 
-static int scribe_start(scribe_context_t *ctx, int action, int flags,
+static int scribe_start(scribe_context_t ctx, int action, int flags,
 			int log_fd, char *const *argv)
 {
 	struct child_args fn_args = { .ctx = ctx, .argv = argv };
@@ -228,17 +239,17 @@ static int scribe_start(scribe_context_t *ctx, int action, int flags,
 	return notification_pump(ctx);
 }
 
-int scribe_record(scribe_context_t *ctx, int flags, int log_fd, char *const *argv)
+int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv)
 {
 	return scribe_start(ctx, SCRIBE_RECORD, flags, log_fd, argv);
 }
 
-int scribe_replay(scribe_context_t *ctx, int flags, int log_fd, char *const *argv)
+int scribe_replay(scribe_context_t ctx, int flags, int log_fd, char *const *argv)
 {
 	return scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd, argv);
 }
 
-int scribe_stop(scribe_context_t *ctx)
+int scribe_stop(scribe_context_t ctx)
 {
 	return cmd_stop(ctx);
 }

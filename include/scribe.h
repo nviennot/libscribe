@@ -23,10 +23,8 @@
 
 #include <linux/scribe_api.h>
 
-typedef struct scribe_context {
-	int dev;
-	void (*on_idle) (struct scribe_context *ctx, int error);
-} scribe_context_t;
+struct scribe_context;
+typedef struct scribe_context *scribe_context_t;
 
 /*
  * Create a scribe context to use the record/replay features
@@ -35,25 +33,39 @@ typedef struct scribe_context {
  * is set appropriately.
  * Once the context is created, you may set your callbacks.
  */
-int scribe_context_create(scribe_context_t **pctx);
+int scribe_context_create(scribe_context_t *pctx);
 
 /* Destroy a scribe context */
-int scribe_context_destroy(scribe_context_t *ctx);
+int scribe_context_destroy(scribe_context_t ctx);
+
+
+struct scribe_operations {
+	void (*on_idle) (scribe_context_t ctx, int error);
+};
+
+/*
+ * Set callbacks for the context.
+ * Must be set before starting record/replay
+ */
+int scribe_set_operations(scribe_context_t ctx, struct scribe_operations *ops);
 
 /*
  * Start record/replay with a command line.
  * The function returns when the record/replay is over.
  */
 #define CUSTOM_INIT_PROCESS	1
-int scribe_record(scribe_context_t *ctx, int flags, int log_fd, char *const *argv);
-int scribe_replay(scribe_context_t *ctx, int flags, int log_fd, char *const *argv);
+int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv);
+int scribe_replay(scribe_context_t ctx, int flags, int log_fd, char *const *argv);
 
 /*
  * Abort the record: It will stop the recording ASAP.
  * Abort the replay: It will go live when it can.
  */
-int scribe_stop(scribe_context_t *ctx);
+int scribe_stop(scribe_context_t ctx);
 
+/*
+ * scribe_get_event_str() returns the string representation of an event
+ */
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event);
 
 #endif /*_SCRIBE_H */

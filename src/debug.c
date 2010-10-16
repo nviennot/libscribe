@@ -255,7 +255,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	char buffer1[4096];
 	char buffer2[4096];
 
-#define DECL_EVENT(t) struct_##t *e = (struct_##t *)event
+#define DECL_EVENT(t) struct_##t *e __attribute__((__unused__)) = \
+	(struct_##t *)event
+
 #define GENERIC_EVENT(t, fmt, ...)					\
 	if (event->type == t) {						\
 		DECL_EVENT(t);						\
