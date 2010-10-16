@@ -272,6 +272,7 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		      e->size,
 		      escape_str(buffer1, 100, e->data, e->size));
 	GENERIC_EVENT(SCRIBE_EVENT_PID, "pid=%d", e->pid);
+	GENERIC_EVENT(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
 #undef GENERIC_EVENT
 
 	snprintf(str, size, "unkown event %d", event->type);

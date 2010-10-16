@@ -174,19 +174,28 @@ static int scribe_start(scribe_context_t *ctx, int action, int flags,
 	int argc, i;
 	int ret;
 
+	for (argc = 0; argv[argc]; argc++);
+
+	if (!argc) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	if (!(flags & CUSTOM_INIT_PROCESS)) {
 		/* We'll use the default init process for scribe
 		 * which is scribe_init
 		 */
-		for (argc = 0; argv[argc]; argc++);
-		argc++;
+		argc++; /* that's for "scribe_init" */
+
 		new_argv = malloc(sizeof(*new_argv) * (argc+1));
 		if (!new_argv)
 			return -1;
+
 		new_argv[0] = "scribe_init";
 		for (i = 1; i < argc; i++)
 			new_argv[i] = argv[i-1];
 		new_argv[i] = NULL;
+
 		fn_args.argv = new_argv;
 	}
 

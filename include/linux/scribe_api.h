@@ -37,6 +37,7 @@ enum scribe_event_type {
 	SCRIBE_EVENT_DATA,
 	SCRIBE_EVENT_SYSCALL,
 	SCRIBE_EVENT_SYSCALL_END,
+	SCRIBE_EVENT_QUEUE_EOF,
 
 	/* userspace -> kernel commands */
 	SCRIBE_EVENT_ATTACH_ON_EXECVE,
@@ -94,6 +95,11 @@ struct scribe_event_syscall_end {
 	struct scribe_event h;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_QUEUE_EOF struct scribe_event_queue_eof
+struct scribe_event_queue_eof {
+	struct scribe_event h;
+} __attribute__((packed));
+
 /* Commands */
 
 #define struct_SCRIBE_EVENT_ATTACH_ON_EXECVE \
@@ -142,6 +148,7 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_DATA);
 	__TYPE(SCRIBE_EVENT_SYSCALL);
 	__TYPE(SCRIBE_EVENT_SYSCALL_END);
+	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
