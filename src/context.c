@@ -42,6 +42,7 @@
 struct scribe_context {
 	int dev;
 	struct scribe_operations ops;
+	loff_t *backtrace;
 };
 
 #define SCRIBE_DEV_PATH "/dev/" SCRIBE_DEVICE_NAME
@@ -68,6 +69,8 @@ int scribe_context_create(scribe_context_t *pctx)
 
 int scribe_context_destroy(scribe_context_t ctx)
 {
+	if (ctx->backtrace)
+		free(ctx->backtrace);
 	if (close(ctx->dev))
 		return -1;
 	free(ctx);
@@ -92,7 +95,7 @@ static int _cmd(scribe_context_t ctx, void *event)
 		return -1;
 
 	if (written != to_write) {
-		errno = -EINVAL;
+		errno = EINVAL;
 		return -1;
 	}
 
@@ -104,10 +107,11 @@ static int cmd_record(scribe_context_t ctx, int log_fd)
 		{.h = {.type = SCRIBE_EVENT_RECORD}, .log_fd = log_fd};
 	return _cmd(ctx, &e);
 }
-static int cmd_replay(scribe_context_t ctx, int log_fd)
+static int cmd_replay(scribe_context_t ctx, int log_fd, int backtrace_len)
 {
 	struct scribe_event_replay e =
-		{.h = {.type = SCRIBE_EVENT_REPLAY}, .log_fd = log_fd};
+		{.h = {.type = SCRIBE_EVENT_REPLAY},
+			.log_fd = log_fd, .backtrace_len = backtrace_len };
 	return _cmd(ctx, &e);
 }
 static int cmd_stop(scribe_context_t ctx)
@@ -153,6 +157,8 @@ bad:
 
 static int notification_pump(scribe_context_t ctx)
 {
+	int backtrace_len = 0;
+
 	char buffer[1024];
 	struct scribe_event *e = (struct scribe_event *)buffer;
 
@@ -160,6 +166,17 @@ static int notification_pump(scribe_context_t ctx)
 		/* Events arrive one by one */
 		if (read(ctx->dev, buffer, sizeof(buffer)) < 0)
 			return -1;
+
+		if (e->type == SCRIBE_EVENT_BACKTRACE) {
+			struct scribe_event_backtrace *bt = (void*)buffer;
+			ctx->backtrace[backtrace_len++] = bt->event_offset;
+		} else if (backtrace_len) {
+			if (ctx->ops.on_backtrace) {
+				ctx->ops.on_backtrace(ctx, ctx->backtrace,
+						      backtrace_len);
+			}
+			backtrace_len = 0;
+		}
 
 		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
 			struct scribe_event_context_idle *idle = (void*)buffer;
@@ -175,7 +192,7 @@ static int notification_pump(scribe_context_t ctx)
 #define STACK_SIZE 4*4096
 
 static int scribe_start(scribe_context_t ctx, int action, int flags,
-			int log_fd, char *const *argv)
+			int log_fd, int backtrace_len, char *const *argv)
 {
 	struct child_args fn_args = { .ctx = ctx, .argv = argv };
 	char **new_argv = NULL;
@@ -219,7 +236,7 @@ static int scribe_start(scribe_context_t ctx, int action, int flags,
 	if (action == SCRIBE_RECORD)
 		ret = cmd_record(ctx, log_fd);
 	else
-		ret = cmd_replay(ctx, log_fd);
+		ret = cmd_replay(ctx, log_fd, backtrace_len);
 	if (ret) {
 		free(new_argv);
 		free(stack);
@@ -241,12 +258,20 @@ static int scribe_start(scribe_context_t ctx, int action, int flags,
 
 int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv)
 {
-	return scribe_start(ctx, SCRIBE_RECORD, flags, log_fd, argv);
+	return scribe_start(ctx, SCRIBE_RECORD, flags, log_fd, 0, argv);
 }
 
-int scribe_replay(scribe_context_t ctx, int flags, int log_fd, char *const *argv)
+int scribe_replay(scribe_context_t ctx, int flags, int log_fd,
+		  int backtrace_len, char *const *argv)
 {
-	return scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd, argv);
+	if (backtrace_len) {
+		if (ctx->backtrace)
+			free(ctx->backtrace);
+		ctx->backtrace = malloc(sizeof(loff_t) * backtrace_len);
+		if (!ctx->backtrace)
+			return -1;
+	}
+	return scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd, backtrace_len, argv);
 }
 
 int scribe_stop(scribe_context_t ctx)

@@ -13,8 +13,12 @@ install(TARGETS scribe scribe_init
 install(FILES include/scribe.h DESTINATION /usr/include)
 install(FILES include/linux/scribe_api.h DESTINATION /usr/include/linux)
 
-add_executable(record src/scribe.c)
+add_executable(record src/record.c)
 target_link_libraries(record scribe)
-
+add_executable(replay src/replay.c)
+target_link_libraries(replay scribe)
 add_executable(profiler src/profiler.c)
 target_link_libraries(profiler scribe)
+install(TARGETS record replay profiler
+	RUNTIME DESTINATION /usr/bin
+)

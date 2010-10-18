@@ -24,7 +24,8 @@
 #endif /* __KERNEL__ */
 
 
-#define EDIVERGE	139	/* Replay diverged */
+/* FIXME This has to go in <asm/errno.h> */
+#define EDIVERGE	200	/* Replay diverged */
 
 #define SCRIBE_IDLE		0x00000000
 #define SCRIBE_RECORD		0x00000001
@@ -48,12 +49,14 @@ enum scribe_event_type {
 	SCRIBE_EVENT_STOP,
 
 	/* kernel -> userspace notifications */
+	SCRIBE_EVENT_BACKTRACE,
 	SCRIBE_EVENT_CONTEXT_IDLE
 };
 
 struct scribe_event {
 #ifdef __KERNEL__
 	struct list_head node;
+	loff_t log_offset; /* Only used during replay for back traces */
 	__u8 __align__[3];
 	char payload_offset[0];
 	/*
@@ -80,7 +83,7 @@ struct scribe_event_pid {
 #define struct_SCRIBE_EVENT_DATA struct scribe_event_data
 struct scribe_event_data {
 	struct scribe_event h;
-	__u32 size;
+	__u16 size;
 	__u32 user_ptr; /* FIXME 64 bit support ? */
 	__u8 data_type;
 	__u8 data[0];
@@ -123,6 +126,7 @@ struct scribe_event_record {
 struct scribe_event_replay {
 	struct scribe_event h;
 	__u32 log_fd;
+	__s32 backtrace_len;
 } __attribute__((packed));
 
 #define struct_SCRIBE_EVENT_STOP struct scribe_event_stop
@@ -132,6 +136,12 @@ struct scribe_event_stop {
 
 
 /* Notifications */
+
+#define struct_SCRIBE_EVENT_BACKTRACE struct scribe_event_backtrace
+struct scribe_event_backtrace {
+	struct scribe_event h;
+	__u64 event_offset;
+} __attribute__((packed));
 
 #define struct_SCRIBE_EVENT_CONTEXT_IDLE struct scribe_event_context_idle
 struct scribe_event_context_idle {
@@ -159,6 +169,7 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_REPLAY);
 	__TYPE(SCRIBE_EVENT_STOP);
 
+	__TYPE(SCRIBE_EVENT_BACKTRACE);
 	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);
 
 #undef  __TYPE
