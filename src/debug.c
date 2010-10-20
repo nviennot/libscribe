@@ -272,8 +272,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, ptr = %p, size = %u, %s",
 		      get_data_type_str(e->data_type),
 		      (void *)e->user_ptr,
-		      e->size,
-		      escape_str(buffer1, 100, e->data, e->size));
+		      e->h.size,
+		      escape_str(buffer1, 100, e->data, e->h.size));
 	GENERIC_EVENT(SCRIBE_EVENT_PID, "pid=%d", e->pid);
 	GENERIC_EVENT(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
 #undef GENERIC_EVENT

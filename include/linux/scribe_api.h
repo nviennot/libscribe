@@ -61,10 +61,15 @@ struct scribe_event {
 	char payload_offset[0];
 	/*
 	 * type must directly follow payload_offset,
-	 * dev_write() relies on it.
+	 * serialization routines depend on it.
 	 */
 #endif
 	__u8 type;
+} __attribute__((packed));
+
+struct scribe_event_sized {
+	struct scribe_event h;
+	__u16 size;
 } __attribute__((packed));
 
 /* Log file */
@@ -82,8 +87,7 @@ struct scribe_event_pid {
 
 #define struct_SCRIBE_EVENT_DATA struct scribe_event_data
 struct scribe_event_data {
-	struct scribe_event h;
-	__u16 size;
+	struct scribe_event_sized h;
 	__u32 user_ptr; /* FIXME 64 bit support ? */
 	__u8 data_type;
 	__u8 data[0];
@@ -117,6 +121,7 @@ struct scribe_event_attach_on_execve {
 } __attribute__((packed));
 
 #define struct_SCRIBE_EVENT_RECORD struct scribe_event_record
+
 struct scribe_event_record {
 	struct scribe_event h;
 	__u32 log_fd;
@@ -150,10 +155,14 @@ struct scribe_event_context_idle {
 } __attribute__((packed));
 
 
+static __always_inline int is_sized_type(int type)
+{
+	return type == SCRIBE_EVENT_DATA;
+}
+
 void __you_are_using_an_unknown_scribe_type(void);
 /*
- * XXX Data events have a variable size. This additional payload
- * is NOT accounted here.
+ * XXX The additional payload of sized event is NOT accounted here.
  */
 static __always_inline size_t sizeof_event_from_type(__u8 type)
 {
@@ -183,8 +192,8 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 static inline size_t sizeof_event(struct scribe_event *event)
 {
 	size_t sz = sizeof_event_from_type(event->type);
-	if (event->type == SCRIBE_EVENT_DATA)
-		sz += ((struct scribe_event_data *)event)->size;
+	if (is_sized_type(event->type))
+		sz += ((struct scribe_event_sized *)event)->size;
 	return sz;
 }
 
