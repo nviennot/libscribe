@@ -50,7 +50,12 @@ enum scribe_event_type {
 
 	/* kernel -> userspace notifications */
 	SCRIBE_EVENT_BACKTRACE,
-	SCRIBE_EVENT_CONTEXT_IDLE
+	SCRIBE_EVENT_CONTEXT_IDLE,
+	SCRIBE_EVENT_DIVERGE_EVENT_TYPE,
+	SCRIBE_EVENT_DIVERGE_EVENT_SIZE,
+	SCRIBE_EVENT_DIVERGE_DATA_TYPE,
+	SCRIBE_EVENT_DIVERGE_DATA_PTR,
+	SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
 };
 
 struct scribe_event {
@@ -70,6 +75,11 @@ struct scribe_event {
 struct scribe_event_sized {
 	struct scribe_event h;
 	__u16 size;
+} __attribute__((packed));
+
+struct scribe_event_diverge {
+	struct scribe_event h;
+	__u32 pid;
 } __attribute__((packed));
 
 /* Log file */
@@ -154,10 +164,58 @@ struct scribe_event_context_idle {
 	__s32 error;
 } __attribute__((packed));
 
+/* Diverge Notifications */
+
+#define struct_SCRIBE_EVENT_DIVERGE_EVENT_TYPE \
+	struct scribe_event_diverge_event_type
+struct scribe_event_diverge_event_type {
+	struct scribe_event_diverge h;
+	__u8 type;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_DIVERGE_EVENT_SIZE \
+	struct scribe_event_diverge_event_size
+struct scribe_event_diverge_event_size {
+	struct scribe_event_diverge h;
+	__u16 size;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_DIVERGE_DATA_TYPE \
+	struct scribe_event_diverge_data_type
+struct scribe_event_diverge_data_type {
+	struct scribe_event_diverge h;
+	__u8 type;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_DIVERGE_DATA_PTR \
+	struct scribe_event_diverge_data_ptr
+struct scribe_event_diverge_data_ptr {
+	struct scribe_event_diverge h;
+	__u32 user_ptr;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_DIVERGE_DATA_CONTENT \
+	struct scribe_event_diverge_data_content
+struct scribe_event_diverge_data_content {
+	struct scribe_event_diverge h;
+	__u16 offset;
+	__u8 size;
+	__u8 data[128];
+} __attribute__((packed));
+
 
 static __always_inline int is_sized_type(int type)
 {
 	return type == SCRIBE_EVENT_DATA;
+}
+
+static __always_inline int is_diverge_type(int type)
+{
+	return  type == SCRIBE_EVENT_DIVERGE_EVENT_TYPE ||
+		type == SCRIBE_EVENT_DIVERGE_EVENT_SIZE ||
+		type == SCRIBE_EVENT_DIVERGE_DATA_TYPE ||
+		type == SCRIBE_EVENT_DIVERGE_DATA_PTR ||
+		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT;
 }
 
 void __you_are_using_an_unknown_scribe_type(void);
@@ -180,6 +238,12 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 
 	__TYPE(SCRIBE_EVENT_BACKTRACE);
 	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);
+
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
 
 #undef  __TYPE
 

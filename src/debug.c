@@ -149,6 +149,32 @@ static char *get_syscall_str(char *buffer, unsigned int n)
 
 }
 
+static char *get_type_str(int type)
+{
+#define __TYPE(t) if (type == t) return #t
+	__TYPE(SCRIBE_EVENT_PID);
+	__TYPE(SCRIBE_EVENT_DATA);
+	__TYPE(SCRIBE_EVENT_SYSCALL);
+	__TYPE(SCRIBE_EVENT_SYSCALL_END);
+	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
+
+	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
+	__TYPE(SCRIBE_EVENT_RECORD);
+	__TYPE(SCRIBE_EVENT_REPLAY);
+	__TYPE(SCRIBE_EVENT_STOP);
+
+	__TYPE(SCRIBE_EVENT_BACKTRACE);
+	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);
+
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
+#undef  __TYPE
+	return "unkown type";
+}
+
 #define MAX_ERRNO	4095
 #define IS_ERR_VALUE(x) ((x) >= (unsigned long)-MAX_ERRNO)
 static char *get_ret_str(char *buffer, long ret)
@@ -259,24 +285,56 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 #define DECL_EVENT(t) struct_##t *e __attribute__((__unused__)) = \
 	(struct_##t *)event
 
-#define GENERIC_EVENT(t, fmt, ...)					\
-	if (event->type == t) {						\
-		DECL_EVENT(t);						\
-		snprintf(str, size, fmt, ##__VA_ARGS__);		\
-		return str;						\
+#define __TYPE(t, fmt, ...)					\
+	if (event->type == t) {					\
+		DECL_EVENT(t);					\
+		snprintf(str, size, fmt, ##__VA_ARGS__);	\
+		return str;					\
 	}
-	GENERIC_EVENT(SCRIBE_EVENT_SYSCALL, "%s() = %s",
+	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);
+	__TYPE(SCRIBE_EVENT_DATA, "data: %s, ptr = %p, size = %u, %s",
+		      get_data_type_str(e->data_type),
+		      (void *)e->user_ptr, e->h.size,
+		      escape_str(buffer1, 100, e->data, e->h.size));
+	__TYPE(SCRIBE_EVENT_SYSCALL, "%s() = %s",
 		      get_syscall_str(buffer1, e->nr),
 		      get_ret_str(buffer2, e->ret));
-	GENERIC_EVENT(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
-	GENERIC_EVENT(SCRIBE_EVENT_DATA, "data: %s, ptr = %p, size = %u, %s",
-		      get_data_type_str(e->data_type),
-		      (void *)e->user_ptr,
-		      e->h.size,
-		      escape_str(buffer1, 100, e->data, e->h.size));
-	GENERIC_EVENT(SCRIBE_EVENT_PID, "pid=%d", e->pid);
-	GENERIC_EVENT(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
-#undef GENERIC_EVENT
+	__TYPE(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
+	__TYPE(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
+
+
+	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
+		      "attach_on_execve: %d", e->enable);
+	__TYPE(SCRIBE_EVENT_RECORD,
+		      "start recording, logfd = %d", e->log_fd);
+	__TYPE(SCRIBE_EVENT_REPLAY,
+		      "start replaying, logfd = %d, backtrace_len = %d",
+		      e->log_fd, e->backtrace_len);
+	__TYPE(SCRIBE_EVENT_STOP, "stop request");
+
+
+	__TYPE(SCRIBE_EVENT_BACKTRACE,
+		      "backtrace: offset = %lld", e->event_offset);
+	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE,
+		      "context idle: error = %d", e->error);
+
+
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE,
+		      "diverged on event type, expected type = %s",
+		      get_type_str(e->type));
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE,
+		      "diverged on event size, expected size = %s",
+		      get_type_str(e->size));
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE,
+		      "diverged on data type, expected type = %s",
+		      get_data_type_str(e->type));
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR,
+		      "diverged on data ptr, expected user ptr = %p",
+		      (void *)e->user_ptr);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
+		      "diverged on data content, offset = %d, %s",
+		      e->offset, escape_str(buffer1, 100, e->data, e->size));
+#undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
 	return str;

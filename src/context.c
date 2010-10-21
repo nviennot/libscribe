@@ -178,6 +178,11 @@ static int notification_pump(scribe_context_t ctx)
 			backtrace_len = 0;
 		}
 
+		if (is_diverge_type(e->type) && ctx->ops.on_diverge) {
+			ctx->ops.on_diverge(ctx,
+					    (struct scribe_event_diverge *)e);
+		}
+
 		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
 			struct scribe_event_context_idle *idle = (void*)buffer;
 			if (ctx->ops.on_idle)

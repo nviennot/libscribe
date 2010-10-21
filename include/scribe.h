@@ -42,6 +42,7 @@ int scribe_context_destroy(scribe_context_t ctx);
 struct scribe_operations {
 	void (*on_idle) (scribe_context_t ctx, int error);
 	void (*on_backtrace) (scribe_context_t ctx, loff_t *log_offset, int num);
+	void (*on_diverge) (scribe_context_t ctx, struct scribe_event_diverge *event);
 };
 
 /*
