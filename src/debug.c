@@ -277,6 +277,33 @@ static char *get_data_type_str(int type)
 	}
 }
 
+static char *get_diverge_data_str(char *buf, ssize_t buf_size, int offset,
+				  const char *data, size_t data_size)
+{
+	char dbuf[offset + data_size];
+	char tmp[buf_size];
+	int i;
+
+	if (offset > buf_size/2)
+		return escape_str(buf, buf_size, data, data_size);
+
+	if (data_size > 2*sizeof(long))
+		data_size -= (offset + data_size) % sizeof(long);
+
+	memcpy(dbuf+offset, data, data_size);
+
+	memset(dbuf, 0xCC, offset);
+	escape_str(tmp, buf_size, dbuf, offset+data_size);
+	memset(dbuf, 0xDD, offset);
+	escape_str(buf, buf_size, dbuf, offset+data_size);
+
+	for (i = 0; i < buf_size; i++) {
+		if (buf[i] != tmp[i])
+			buf[i] = '?';
+	}
+	return buf;
+}
+
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
@@ -323,8 +350,7 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		      "diverged on event type, expected type = %s",
 		      get_type_str(e->type));
 	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE,
-		      "diverged on event size, expected size = %s",
-		      get_type_str(e->size));
+		      "diverged on event size, expected size = %d", e->size);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE,
 		      "diverged on data type, expected type = %s",
 		      get_data_type_str(e->type));
@@ -332,8 +358,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		      "diverged on data ptr, expected user ptr = %p",
 		      (void *)e->user_ptr);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
-		      "diverged on data content, offset = %d, %s",
-		      e->offset, escape_str(buffer1, 100, e->data, e->size));
+		      "diverged on data content, offset = %d, %s", e->offset,
+		      get_diverge_data_str(buffer1, 100, e->offset,
+					   (char *)e->data, e->size));
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
