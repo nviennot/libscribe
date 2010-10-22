@@ -56,10 +56,8 @@ int scribe_set_operations(scribe_context_t ctx, struct scribe_operations *ops);
  * The function returns when the record/replay is over.
  */
 #define CUSTOM_INIT_PROCESS	1
-int scribe_record(scribe_context_t ctx, int flags, int log_fd,
-		  char *const *argv);
-int scribe_replay(scribe_context_t ctx, int flags, int log_fd,
-		  int backtrace_len, char *const *argv);
+int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv);
+int scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len);
 
 /*
  * Abort the record: It will stop the recording ASAP.

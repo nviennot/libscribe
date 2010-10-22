@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 	scribe_context_create(&ctx);
 	scribe_set_operations(ctx, &scribe_ops);
 
-	if (scribe_replay(ctx, 0, logfile, 100, argv+1) < 0)
+	if (scribe_replay(ctx, 0, logfile, 100) < 0)
 		LIBERROR("can't record");
 
 	return 0;

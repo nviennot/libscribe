@@ -304,6 +304,28 @@ static char *get_diverge_data_str(char *buf, ssize_t buf_size, int offset,
 	return buf;
 }
 
+static char *get_strv_str(char *buf, ssize_t buf_size,
+			  const char *data, int offset, int len)
+{
+	int s;
+	char *orig_buf = buf;
+
+	while (offset--)
+		data += strlen(data) + 1;
+
+	while (len-- && buf_size > 0) {
+		s = snprintf(buf, buf_size, "%s%s", data, len ? " " : "");
+		buf += s;
+		buf_size -= s;
+		data += strlen(data) + 1;
+	}
+
+	if (buf_size <= 0)
+		strcpy(buf-4+buf_size, "...");
+
+	return orig_buf;
+
+}
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
@@ -318,6 +340,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		snprintf(str, size, fmt, ##__VA_ARGS__);	\
 		return str;					\
 	}
+	__TYPE(SCRIBE_EVENT_INIT, "init: argv=\"%s\", envp=\"%s\"",
+	       get_strv_str(buffer1, 100, (char *)e->data, 0, e->argc),
+	       get_strv_str(buffer2, 50, (char *)e->data, e->argc, e->envc));
 	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);
 	__TYPE(SCRIBE_EVENT_DATA, "data: %s, ptr = %p, size = %u, %s",
 		      get_data_type_str(e->data_type),

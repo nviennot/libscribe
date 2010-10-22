@@ -131,11 +131,13 @@ static int cmd_attach_on_execve(scribe_context_t ctx, int enable)
 struct child_args {
 	scribe_context_t ctx;
 	char *const *argv;
+	char *const *envp;
 };
 static int init_process(void *_fn_args)
 {
 	struct child_args *fn_args = _fn_args;
 	scribe_context_t ctx = fn_args->ctx;
+	char *const *envp;
 
 	/* mount a fresh new /proc */
 	umount2("/proc", MNT_DETACH);
@@ -144,8 +146,19 @@ static int init_process(void *_fn_args)
 	if (cmd_attach_on_execve(ctx, 1))
 		goto bad;
 
-	/* close the scribe device, so that it doesn't appear in the
-	 * child's process space
+	envp = fn_args->envp;
+	if (envp && envp != environ) {
+		if (clearenv())
+			goto bad;
+		for (; *envp; envp++) {
+			if (putenv((char *)*envp))
+				goto bad;
+		}
+	}
+
+	/*
+	 * Close the scribe device, so that it doesn't appear in the
+	 * child's process space.
 	 */
 	close(ctx->dev);
 
@@ -197,13 +210,157 @@ static int notification_pump(scribe_context_t ctx)
 #define STACK_SIZE 4*4096
 
 static int scribe_start(scribe_context_t ctx, int action, int flags,
-			int log_fd, int backtrace_len, char *const *argv)
+			int log_fd, int backtrace_len,
+			char *const *argv, char *const *envp)
 {
-	struct child_args fn_args = { .ctx = ctx, .argv = argv };
-	char **new_argv = NULL;
+	struct child_args fn_args = {
+		.ctx = ctx,
+		.argv = argv,
+		.envp = envp,
+	};
 	pid_t init_pid;
 	int clone_flags;
 	char *stack;
+	int ret;
+
+	stack = malloc(STACK_SIZE);
+	if (!stack)
+		return -1;
+
+	if (action == SCRIBE_RECORD)
+		ret = cmd_record(ctx, log_fd);
+	else
+		ret = cmd_replay(ctx, log_fd, backtrace_len);
+	if (ret) {
+		free(stack);
+		return -1;
+	}
+
+	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD;
+	init_pid = clone(init_process, stack + STACK_SIZE, clone_flags, &fn_args);
+	free(stack);
+
+	if (init_pid < 0) {
+		scribe_stop(ctx);
+		return -1;
+	}
+
+	return notification_pump(ctx);
+}
+
+static ssize_t _read(int fd, void *buf, size_t count)
+{
+	ssize_t ret;
+	size_t to_read = count;
+
+	while (count > 0) {
+		ret = read(fd, buf, count);
+		if (ret < 0)
+			return ret;
+		buf = (char *)buf + ret;
+		count -= ret;
+	}
+	return to_read;
+}
+
+static ssize_t _write(int fd, const void *buf, size_t count)
+{
+	ssize_t ret;
+	size_t to_write = count;
+
+	while (count > 0) {
+		ret = write(fd, buf, count);
+		if (ret < 0)
+			return ret;
+		buf = (char *)buf + ret;
+		count -= ret;
+	}
+	return to_write;
+}
+
+static int save_init(int log_fd, char *const *argv, char *const *envp)
+{
+	struct scribe_event_init *e;
+	int argc, envc;
+	size_t size, total_size;
+	int i;
+	int ret;
+	char *data;
+
+	size = 0;
+	for (argc = 0; argv[argc]; size += strlen(argv[argc])+1, argc++);
+	for (envc = 0; envp[envc]; size += strlen(envp[envc])+1, envc++);
+
+	total_size = size + sizeof_event_from_type(SCRIBE_EVENT_INIT);
+	e = malloc(total_size);
+	if (!e)
+		return -1;
+
+	e->h.h.type = SCRIBE_EVENT_INIT;
+	e->h.size = size;
+	e->argc = argc;
+	e->envc = envc;
+	data = (char *)e->data;
+	for (i = 0; i < argc; i++) {
+		strcpy(data, argv[i]);
+		data += strlen(argv[i]) + 1;
+	}
+	for (i = 0; i < envc; i++) {
+		strcpy(data, envp[i]);
+		data += strlen(envp[i]) + 1;
+	}
+
+	ret = _write(log_fd, e, total_size);
+	free(e);
+	if (ret < 0)
+		return -1;
+	return 0;
+}
+
+static int restore_init(int log_fd, void **_data, char ***_argv, char ***_envp)
+{
+	struct scribe_event_init e;
+	char *data = NULL;
+	char **argv = NULL, **envp = NULL;
+	int i;
+
+	if (_read(log_fd, &e, sizeof(e)) < 0)
+		return -1;
+
+	data = malloc(e.h.size + (e.argc + e.envc + 2) * sizeof(char *));
+	if (!data)
+		return -1;
+
+	argv = (char **)(data + e.h.size);
+	envp = argv + e.argc + 1;
+
+	*_data = data;
+	*_argv = argv;
+	*_envp = envp;
+
+	if (_read(log_fd, data, e.h.size) < 0) {
+		free(data);
+		return -1;
+	}
+
+	for (i = 0; i < e.argc; i++) {
+		argv[i] = data;
+		data += strlen(data) + 1;
+	}
+	argv[i] = NULL;
+
+	for (i = 0; i < e.envc; i++) {
+		envp[i] = data;
+		data += strlen(data) + 1;
+	}
+	envp[i] = NULL;
+
+	return 0;
+}
+
+int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv)
+{
+	char **new_argv = NULL;
 	int argc, i;
 	int ret;
 
@@ -229,54 +386,44 @@ static int scribe_start(scribe_context_t ctx, int action, int flags,
 			new_argv[i] = argv[i-1];
 		new_argv[i] = NULL;
 
-		fn_args.argv = new_argv;
+		argv = new_argv;
 	}
 
-	stack = malloc(STACK_SIZE);
-	if (!stack) {
+	if (save_init(log_fd, argv, environ) < 0) {
 		free(new_argv);
 		return -1;
 	}
 
-	if (action == SCRIBE_RECORD)
-		ret = cmd_record(ctx, log_fd);
-	else
-		ret = cmd_replay(ctx, log_fd, backtrace_len);
-	if (ret) {
-		free(new_argv);
-		free(stack);
-		return -1;
-	}
+	ret = scribe_start(ctx, SCRIBE_RECORD, flags, log_fd,
+			   0, argv, environ);
 
-	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD;
-	init_pid = clone(init_process, stack + STACK_SIZE, clone_flags, &fn_args);
-	free(stack);
 	free(new_argv);
+	return ret;
+}
 
-	if (init_pid < 0) {
-		scribe_stop(ctx);
+int scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len)
+{
+	int ret;
+	void *data;
+	char **argv, **envp;
+
+	if (restore_init(log_fd, &data, &argv, &envp) < 0)
 		return -1;
-	}
 
-	return notification_pump(ctx);
-}
-
-int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv)
-{
-	return scribe_start(ctx, SCRIBE_RECORD, flags, log_fd, 0, argv);
-}
-
-int scribe_replay(scribe_context_t ctx, int flags, int log_fd,
-		  int backtrace_len, char *const *argv)
-{
 	if (backtrace_len) {
 		if (ctx->backtrace)
 			free(ctx->backtrace);
 		ctx->backtrace = malloc(sizeof(loff_t) * backtrace_len);
-		if (!ctx->backtrace)
+		if (!ctx->backtrace) {
+			free(data);
 			return -1;
+		}
 	}
-	return scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd, backtrace_len, argv);
+
+	ret = scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd,
+			   backtrace_len, argv, envp);
+	free(data);
+	return ret;
 }
 
 int scribe_stop(scribe_context_t ctx)
