@@ -41,13 +41,15 @@
 
 struct scribe_context {
 	int dev;
-	struct scribe_operations ops;
+	struct scribe_operations *ops;
+	void *private_data;
 	loff_t *backtrace;
 };
 
 #define SCRIBE_DEV_PATH "/dev/" SCRIBE_DEVICE_NAME
 
-int scribe_context_create(scribe_context_t *pctx)
+int scribe_context_create(scribe_context_t *pctx, struct scribe_operations *ops,
+			  void *private_data)
 {
 	scribe_context_t ctx;
 
@@ -63,6 +65,9 @@ int scribe_context_create(scribe_context_t *pctx)
 		return -1;
 	}
 
+	ctx->ops = ops;
+	ctx->private_data = private_data;
+
 	*pctx = ctx;
 	return 0;
 }
@@ -74,12 +79,6 @@ int scribe_context_destroy(scribe_context_t ctx)
 	if (close(ctx->dev))
 		return -1;
 	free(ctx);
-	return 0;
-}
-
-int scribe_set_operations(scribe_context_t ctx, struct scribe_operations *ops)
-{
-	ctx->ops = *ops;
 	return 0;
 }
 
@@ -184,22 +183,25 @@ static int notification_pump(scribe_context_t ctx)
 			struct scribe_event_backtrace *bt = (void*)buffer;
 			ctx->backtrace[backtrace_len++] = bt->event_offset;
 		} else if (backtrace_len) {
-			if (ctx->ops.on_backtrace) {
-				ctx->ops.on_backtrace(ctx, ctx->backtrace,
-						      backtrace_len);
+			if (ctx->ops && ctx->ops->on_backtrace) {
+				ctx->ops->on_backtrace(ctx->private_data,
+						       ctx->backtrace,
+						       backtrace_len);
 			}
 			backtrace_len = 0;
 		}
 
-		if (is_diverge_type(e->type) && ctx->ops.on_diverge) {
-			ctx->ops.on_diverge(ctx,
-					    (struct scribe_event_diverge *)e);
+		if (is_diverge_type(e->type) && ctx->ops && ctx->ops->on_diverge) {
+			ctx->ops->on_diverge(ctx->private_data,
+					     (struct scribe_event_diverge *)e);
 		}
 
 		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
 			struct scribe_event_context_idle *idle = (void*)buffer;
-			if (ctx->ops.on_idle)
-				ctx->ops.on_idle(ctx, idle->error);
+			if (idle->error) {
+				errno = -idle->error;
+				return -1;
+			}
 			return 0;
 		}
 	}

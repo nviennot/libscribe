@@ -15,19 +15,7 @@
 
 int logfile;
 
-int has_diverged;
-
-static void on_idle(scribe_context_t ctx, int error)
-{
-	if (error < 0)
-		printf("On Idle: error=%d %s\n", -error, strerror(-error));
-	else if (error > 0 && !has_diverged)
-		printf("On Idle: error=%d\n", error);
-	else
-		printf("Done\n");
-}
-
-static void on_backtrace(scribe_context_t ctx, loff_t *log_offset, int num)
+static void on_backtrace(void *private_data, loff_t *log_offset, int num)
 {
 	struct scribe_event *event;
 	char *log_buffer;
@@ -48,18 +36,15 @@ static void on_backtrace(scribe_context_t ctx, loff_t *log_offset, int num)
 	}
 }
 
-static void on_diverge(scribe_context_t ctx, struct scribe_event_diverge *e)
+static void on_diverge(void *private_data, struct scribe_event_diverge *e)
 {
 	char buffer[2000];
 	scribe_get_event_str(buffer, sizeof(buffer), (struct scribe_event *)e);
 	printf("Diverged:\n");
 	printf("    [%02d] %s\n", e->pid, buffer);
-
-	has_diverged = 1;
 }
 
 static struct scribe_operations scribe_ops = {
-	.on_idle = on_idle,
 	.on_backtrace = on_backtrace,
 	.on_diverge = on_diverge
 };
@@ -72,8 +57,7 @@ int main(int argc, char **argv)
 	if (logfile < 0)
 		LIBERROR("cannot open logfile");
 
-	scribe_context_create(&ctx);
-	scribe_set_operations(ctx, &scribe_ops);
+	scribe_context_create(&ctx, &scribe_ops, NULL);
 
 	if (scribe_replay(ctx, 0, logfile, 100) < 0)
 		LIBERROR("can't record");

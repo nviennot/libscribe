@@ -26,30 +26,22 @@
 struct scribe_context;
 typedef struct scribe_context *scribe_context_t;
 
+struct scribe_operations {
+	void (*on_backtrace) (void *private_data, loff_t *log_offset, int num);
+	void (*on_diverge) (void *private_data, struct scribe_event_diverge *event);
+};
+
 /*
  * Create a scribe context to use the record/replay features
  * On success, scribe_context_create() returns 0 and you can start using scribe
  * On error, it returns -1, and the contents of *ctx are undefined, and errno
  * is set appropriately.
- * Once the context is created, you may set your callbacks.
  */
-int scribe_context_create(scribe_context_t *pctx);
+int scribe_context_create(scribe_context_t *pctx, struct scribe_operations *ops,
+			  void *private_data);
 
 /* Destroy a scribe context */
 int scribe_context_destroy(scribe_context_t ctx);
-
-
-struct scribe_operations {
-	void (*on_idle) (scribe_context_t ctx, int error);
-	void (*on_backtrace) (scribe_context_t ctx, loff_t *log_offset, int num);
-	void (*on_diverge) (scribe_context_t ctx, struct scribe_event_diverge *event);
-};
-
-/*
- * Set callbacks for the context.
- * Must be set before starting record/replay
- */
-int scribe_set_operations(scribe_context_t ctx, struct scribe_operations *ops);
 
 /*
  * Start record/replay with a command line.
