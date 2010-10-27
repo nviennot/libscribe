@@ -35,9 +35,7 @@
 #include <sys/mount.h>
 #include <signal.h>
 #include <limits.h>
-
 #include <scribe.h>
-#include "eclone.h"
 
 struct scribe_context {
 	int dev;

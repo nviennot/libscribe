@@ -11,8 +11,6 @@
 #include <linux/types.h>
 #include <scribe.h>
 
-
-
 #define LIBERROR(msg, args...) { error( 0, errno, msg, ##args ); return -1; }
 #define ERROR(msg, args...) { error( 0, 0, msg, ##args ); return -1; }
 
