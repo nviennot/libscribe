@@ -3,17 +3,11 @@ project(scribe C)
 add_definitions(-Wall -O2 -g)
 include_directories(include)
 
-add_library(scribe SHARED src/context.c src/clone_x86_32.c src/debug.c)
+add_library(scribe SHARED src/context.c src/debug.c)
 
 add_executable(scribe_init src/init_process.c)
-add_executable(record src/record.c)
-target_link_libraries(record scribe)
-add_executable(replay src/replay.c)
-target_link_libraries(replay scribe)
-add_executable(profiler src/profiler.c)
-target_link_libraries(profiler scribe)
 
-install(TARGETS scribe scribe_init record replay profiler
+install(TARGETS scribe scribe_init
 	LIBRARY DESTINATION /usr/lib
 	RUNTIME DESTINATION /usr/bin
 )
