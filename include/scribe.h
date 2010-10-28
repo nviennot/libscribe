@@ -65,6 +65,8 @@ pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_l
 /*
  * Wait for the record/replay to finish. It also allow your notifications to
  * get called.
+ * returns -1 when the record/replay failed
+ * returns -2 when pumping notification failed
  */
 int scribe_wait(scribe_context_t ctx);
 

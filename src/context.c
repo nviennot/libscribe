@@ -406,7 +406,7 @@ int scribe_wait(scribe_context_t ctx)
 	for (;;) {
 		/* Events arrive one by one */
 		if (read(ctx->dev, buffer, sizeof(buffer)) < 0)
-			return -1;
+			return -2;
 
 		if (e->type == SCRIBE_EVENT_BACKTRACE) {
 			struct scribe_event_backtrace *bt = (void*)buffer;
