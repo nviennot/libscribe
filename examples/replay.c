@@ -62,5 +62,8 @@ int main(int argc, char **argv)
 	if (scribe_replay(ctx, 0, logfile, 100) < 0)
 		LIBERROR("can't record");
 
+	if (scribe_wait(ctx) < 0)
+		LIBERROR("can't record");
+
 	return 0;
 }

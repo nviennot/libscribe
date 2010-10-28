@@ -124,6 +124,21 @@ static int cmd_attach_on_execve(scribe_context_t ctx, int enable)
 	return _cmd(ctx, &e);
 }
 
+
+static void default_init_loader(char *const *argv, char *const *envp)
+{
+	if (envp && envp != environ) {
+		if (clearenv())
+			return;
+		for (; *envp; envp++) {
+			if (putenv((char *)*envp))
+				return;
+		}
+	}
+
+	execvp(argv[0], argv);
+}
+
 /* The init process launcher */
 struct child_args {
 	scribe_context_t ctx;
@@ -134,7 +149,6 @@ static int init_process(void *_fn_args)
 {
 	struct child_args *fn_args = _fn_args;
 	scribe_context_t ctx = fn_args->ctx;
-	char *const *envp;
 
 	/* mount a fresh new /proc */
 	umount2("/proc", MNT_DETACH);
@@ -143,75 +157,28 @@ static int init_process(void *_fn_args)
 	if (cmd_attach_on_execve(ctx, 1))
 		goto bad;
 
-	envp = fn_args->envp;
-	if (envp && envp != environ) {
-		if (clearenv())
-			goto bad;
-		for (; *envp; envp++) {
-			if (putenv((char *)*envp))
-				goto bad;
-		}
-	}
-
 	/*
 	 * Close the scribe device, so that it doesn't appear in the
 	 * child's process space.
 	 */
 	close(ctx->dev);
 
-	execvp(fn_args->argv[0], fn_args->argv);
+	if (ctx->ops && ctx->ops->init_loader)
+		ctx->ops->init_loader(ctx->private_data,
+				      fn_args->argv, fn_args->envp);
+	else
+		default_init_loader(fn_args->argv, fn_args->envp);
+
 bad:
 	printf("Init failed. You probably want to ctrl+c\n");
 	return 1;
 }
 
-static int notification_pump(scribe_context_t ctx)
-{
-	int backtrace_len = 0;
-
-	char buffer[1024];
-	struct scribe_event *e = (struct scribe_event *)buffer;
-
-	for (;;) {
-		/* Events arrive one by one */
-		if (read(ctx->dev, buffer, sizeof(buffer)) < 0)
-			return -1;
-
-		if (e->type == SCRIBE_EVENT_BACKTRACE) {
-			struct scribe_event_backtrace *bt = (void*)buffer;
-			ctx->backtrace[backtrace_len++] = bt->event_offset;
-		} else if (backtrace_len) {
-			if (ctx->ops && ctx->ops->on_backtrace) {
-				ctx->ops->on_backtrace(ctx->private_data,
-						       ctx->backtrace,
-						       backtrace_len);
-			}
-			backtrace_len = 0;
-		}
-
-		if (is_diverge_type(e->type) && ctx->ops && ctx->ops->on_diverge) {
-			ctx->ops->on_diverge(ctx->private_data,
-					     (struct scribe_event_diverge *)e);
-		}
-
-		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
-			struct scribe_event_context_idle *idle = (void*)buffer;
-			if (idle->error) {
-				errno = -idle->error;
-				return -1;
-			}
-			return 0;
-		}
-	}
-
-	return 0;
-}
-
 #define STACK_SIZE 4*4096
 
-static int scribe_start(scribe_context_t ctx, int action, int flags,
-			int log_fd, int backtrace_len,
-			char *const *argv, char *const *envp)
+static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
+			  int log_fd, int backtrace_len,
+			  char *const *argv, char *const *envp)
 {
 	struct child_args fn_args = {
 		.ctx = ctx,
@@ -245,7 +212,7 @@ static int scribe_start(scribe_context_t ctx, int action, int flags,
 		return -1;
 	}
 
-	return notification_pump(ctx);
+	return init_pid;
 }
 
 static ssize_t _read(int fd, void *buf, size_t count)
@@ -358,11 +325,12 @@ static int restore_init(int log_fd, void **_data, char ***_argv, char ***_envp)
 	return 0;
 }
 
-int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv)
+pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
+		    char *const *argv, char *const *envp)
 {
 	char **new_argv = NULL;
 	int argc, i;
-	int ret;
+	pid_t ret;
 
 	for (argc = 0; argv[argc]; argc++);
 
@@ -371,39 +339,41 @@ int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv
 		return -1;
 	}
 
-	if (!(flags & CUSTOM_INIT_PROCESS)) {
-		/* We'll use the default init process for scribe
-		 * which is scribe_init
-		 */
-		argc++; /* that's for "scribe_init" */
+	/*
+	 * We'll use the default init process for scribe
+	 * which is scribe_init
+	 */
+	argc++; /* that's for "scribe_init" */
 
-		new_argv = malloc(sizeof(*new_argv) * (argc+1));
-		if (!new_argv)
-			return -1;
+	new_argv = malloc(sizeof(*new_argv) * (argc+1));
+	if (!new_argv)
+		return -1;
 
-		new_argv[0] = "scribe_init";
-		for (i = 1; i < argc; i++)
-			new_argv[i] = argv[i-1];
-		new_argv[i] = NULL;
+	new_argv[0] = "scribe_init";
+	for (i = 1; i < argc; i++)
+		new_argv[i] = argv[i-1];
+	new_argv[i] = NULL;
 
-		argv = new_argv;
-	}
+	argv = new_argv;
 
-	if (save_init(log_fd, argv, environ) < 0) {
+	if (!envp)
+		envp = environ;
+
+	if (save_init(log_fd, argv, envp) < 0) {
 		free(new_argv);
 		return -1;
 	}
 
 	ret = scribe_start(ctx, SCRIBE_RECORD, flags, log_fd,
-			   0, argv, environ);
+			   0, argv, envp);
 
 	free(new_argv);
 	return ret;
 }
 
-int scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len)
+pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len)
 {
-	int ret;
+	pid_t ret;
 	void *data;
 	char **argv, **envp;
 
@@ -424,6 +394,47 @@ int scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len
 			   backtrace_len, argv, envp);
 	free(data);
 	return ret;
+}
+
+int scribe_wait(scribe_context_t ctx)
+{
+	int backtrace_len = 0;
+
+	char buffer[1024];
+	struct scribe_event *e = (struct scribe_event *)buffer;
+
+	for (;;) {
+		/* Events arrive one by one */
+		if (read(ctx->dev, buffer, sizeof(buffer)) < 0)
+			return -1;
+
+		if (e->type == SCRIBE_EVENT_BACKTRACE) {
+			struct scribe_event_backtrace *bt = (void*)buffer;
+			ctx->backtrace[backtrace_len++] = bt->event_offset;
+		} else if (backtrace_len) {
+			if (ctx->ops && ctx->ops->on_backtrace) {
+				ctx->ops->on_backtrace(ctx->private_data,
+						       ctx->backtrace,
+						       backtrace_len);
+			}
+			backtrace_len = 0;
+		}
+
+		if (is_diverge_type(e->type) && ctx->ops && ctx->ops->on_diverge) {
+			ctx->ops->on_diverge(ctx->private_data,
+					     (struct scribe_event_diverge *)e);
+		}
+
+		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
+			struct scribe_event_context_idle *idle = (void*)buffer;
+			if (idle->error) {
+				errno = -idle->error;
+				return -1;
+			}
+			return 0;
+		}
+	}
+	return 0;
 }
 
 int scribe_stop(scribe_context_t ctx)

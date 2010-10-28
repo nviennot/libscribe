@@ -27,6 +27,18 @@ struct scribe_context;
 typedef struct scribe_context *scribe_context_t;
 
 struct scribe_operations {
+	/*
+	 * When starting record/replay, init_loader() will be called. This
+	 * function is responsable to execve() the init process.
+	 * Note: "scribe_init" will be prepended to argv.
+	 * Note: during replay, you will be provided with the original
+	 * parameters.
+	 *
+	 * If init_loader == NULL, the default one will be used.
+	 */
+	void (*init_loader) (void *private_data, char *const *argv, char *const *envp);
+
+	/* Notifications during the replay */
 	void (*on_backtrace) (void *private_data, loff_t *log_offset, int num);
 	void (*on_diverge) (void *private_data, struct scribe_event_diverge *event);
 };
@@ -44,12 +56,17 @@ int scribe_context_create(scribe_context_t *pctx, struct scribe_operations *ops,
 int scribe_context_destroy(scribe_context_t ctx);
 
 /*
- * Start record/replay with a command line.
- * The function returns when the record/replay is over.
+ * Start record/replay with a command line. Returns the pid of the init
+ * process.
  */
-#define CUSTOM_INIT_PROCESS	1
-int scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv);
-int scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len);
+pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv, char *const *envp);
+pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len);
+
+/*
+ * Wait for the record/replay to finish. It also allow your notifications to
+ * get called.
+ */
+int scribe_wait(scribe_context_t ctx);
 
 /*
  * Abort the record: It will stop the recording ASAP.

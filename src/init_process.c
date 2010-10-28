@@ -49,5 +49,8 @@ int main(int argc, char **argv)
 	/* child reaper */
 	while (waitpid(-1, &status, __WALL) >= 0);
 
+	if (WIFEXITED(status))
+		return WEXITSTATUS(status);
+
 	return 0;
 }
