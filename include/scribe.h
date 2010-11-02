@@ -81,4 +81,11 @@ int scribe_stop(scribe_context_t ctx);
  */
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event);
 
+
+/* Scribed process specific */
+int scribe_is_recording(void);
+int scribe_is_replaying(void);
+int scribe_disable(void);
+int scribe_enable(void);
+
 #endif /*_SCRIBE_H */

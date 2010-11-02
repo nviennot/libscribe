@@ -1,4 +1,3 @@
-
 /*
  * scribe.c - Scribe API in user-space
  *

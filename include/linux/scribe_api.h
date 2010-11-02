@@ -27,12 +27,17 @@
 /* FIXME This has to go in <asm/errno.h> */
 #define EDIVERGE	200	/* Replay diverged */
 
+#define SCRIBE_DEVICE_NAME	"scribe"
 #define SCRIBE_IDLE		0x00000000
 #define SCRIBE_RECORD		0x00000001
 #define SCRIBE_REPLAY		0x00000002
 #define SCRIBE_STOP		0x00000004
 
-#define SCRIBE_DEVICE_NAME		"scribe"
+#define SCRIBE_PS_RECORD		0x00000001
+#define SCRIBE_PS_REPLAY		0x00000002
+#define SCRIBE_PS_ENABLE_SYSCALL	0x00000100
+#define SCRIBE_PS_ENABLE_DATA		0x00000200
+#define SCRIBE_PS_ENABLE_ALL		0x0000ff00
 
 enum scribe_event_type {
 	/* log file events */

@@ -3,7 +3,7 @@ project(scribe C)
 add_definitions(-Wall -O2 -g)
 include_directories(include)
 
-add_library(scribe SHARED src/context.c src/debug.c)
+add_library(scribe SHARED src/context.c src/debug.c src/process.c)
 
 add_executable(scribe_init src/init_process.c)
 
