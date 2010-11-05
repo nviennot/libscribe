@@ -47,6 +47,8 @@ enum scribe_event_type {
 	SCRIBE_EVENT_SYSCALL,
 	SCRIBE_EVENT_SYSCALL_END,
 	SCRIBE_EVENT_QUEUE_EOF,
+	SCRIBE_EVENT_RESOURCE_LOCK,
+	SCRIBE_EVENT_RESOURCE_UNLOCK,
 
 	/* userspace -> kernel commands */
 	SCRIBE_EVENT_ATTACH_ON_EXECVE,
@@ -62,6 +64,7 @@ enum scribe_event_type {
 	SCRIBE_EVENT_DIVERGE_DATA_TYPE,
 	SCRIBE_EVENT_DIVERGE_DATA_PTR,
 	SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
+	SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
 };
 
 struct scribe_event {
@@ -131,6 +134,24 @@ struct scribe_event_syscall_end {
 
 #define struct_SCRIBE_EVENT_QUEUE_EOF struct scribe_event_queue_eof
 struct scribe_event_queue_eof {
+	struct scribe_event h;
+} __attribute__((packed));
+
+
+#define SCRIBE_RES_TYPE_INODE	0
+#define SCRIBE_RES_TYPE_FILES	1
+
+#define SCRIBE_RES_TYPE_REGISTRATION(type) ((type) | 0x80)
+
+#define struct_SCRIBE_EVENT_RESOURCE_LOCK struct scribe_event_resource_lock
+struct scribe_event_resource_lock {
+	struct scribe_event h;
+	__u8 type;
+	__u32 serial;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_RESOURCE_UNLOCK struct scribe_event_resource_unlock
+struct scribe_event_resource_unlock {
 	struct scribe_event h;
 } __attribute__((packed));
 
@@ -215,6 +236,12 @@ struct scribe_event_diverge_data_content {
 	__u8 data[128];
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE \
+	struct scribe_event_diverge_resource_type
+struct scribe_event_diverge_resource_type {
+	struct scribe_event_diverge h;
+	__u8 type;
+} __attribute__((packed));
 
 static __always_inline int is_sized_type(int type)
 {
@@ -228,7 +255,8 @@ static __always_inline int is_diverge_type(int type)
 		type == SCRIBE_EVENT_DIVERGE_EVENT_SIZE ||
 		type == SCRIBE_EVENT_DIVERGE_DATA_TYPE ||
 		type == SCRIBE_EVENT_DIVERGE_DATA_PTR ||
-		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT;
+		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT ||
+		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE;
 }
 
 void __you_are_using_an_unknown_scribe_type(void);
@@ -244,6 +272,8 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_SYSCALL);
 	__TYPE(SCRIBE_EVENT_SYSCALL_END);
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
+	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK);
+	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
@@ -258,6 +288,7 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
+	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
 #undef  __TYPE
 
 	if (__builtin_constant_p(type))

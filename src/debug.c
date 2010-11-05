@@ -324,8 +324,25 @@ static char *get_strv_str(char *buf, ssize_t buf_size,
 		strcpy(buf-4+buf_size, "...");
 
 	return orig_buf;
-
 }
+
+static const char *get_res_raw_type_str(int type)
+{
+	switch (type) {
+		case SCRIBE_RES_TYPE_INODE: return "inode";
+		case SCRIBE_RES_TYPE_FILES: return "files";
+		default: return "unkown type";
+	}
+}
+
+static char *get_res_type_str(char *buf, size_t buf_size, int type)
+{
+	snprintf(buf, buf_size, "%s%s",
+		(type & 0x80) ? "registration for " : "",
+		get_res_raw_type_str(type & ~0x80));
+	return buf;
+}
+
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
@@ -353,6 +370,11 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		      get_ret_str(buffer2, e->ret));
 	__TYPE(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
+	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK,
+	       "resource lock, type = %s, serial = %u",
+	       get_res_type_str(buffer1, sizeof(buffer1), e->type),
+	       e->serial);
+	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK, "resource unlock");
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
@@ -386,6 +408,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		      "diverged on data content, offset = %d, %s", e->offset,
 		      get_diverge_data_str(buffer1, 100, e->offset,
 					   (char *)e->data, e->size));
+	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
+		"diverged on resource type, expected type = %s",
+		get_res_type_str(buffer1, sizeof(buffer1), e->type));
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
