@@ -110,6 +110,7 @@ struct scribe_event_pid {
 #define SCRIBE_DATA_STRING		0x02
 #define SCRIBE_DATA_NON_DETERMINISTIC	0x04
 #define SCRIBE_DATA_INTERNAL		0x08
+#define SCRIBE_DATA_ZERO		0x10
 
 #define struct_SCRIBE_EVENT_DATA struct scribe_event_data
 struct scribe_event_data {

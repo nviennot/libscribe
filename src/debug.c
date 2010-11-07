@@ -273,6 +273,8 @@ static char *get_data_type_str(int type)
 		case SCRIBE_DATA_INPUT | SCRIBE_DATA_STRING: return "input string";
 		case SCRIBE_DATA_NON_DETERMINISTIC: return "non-det output";
 		case SCRIBE_DATA_INTERNAL: return "internal";
+		case SCRIBE_DATA_ZERO | SCRIBE_DATA_NON_DETERMINISTIC:
+		case SCRIBE_DATA_ZERO: return "zero output";
 		default: return "unkown";
 	}
 }
