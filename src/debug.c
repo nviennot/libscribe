@@ -339,9 +339,11 @@ static const char *get_res_raw_type_str(int type)
 
 static char *get_res_type_str(char *buf, size_t buf_size, int type)
 {
-	snprintf(buf, buf_size, "%s%s",
-		(type & 0x80) ? "registration for " : "",
-		get_res_raw_type_str(type & ~0x80));
+	int is_reg;
+	is_reg = type & SCRIBE_RES_TYPE_REGISTRATION_FLAG;
+	type &= ~SCRIBE_RES_TYPE_REGISTRATION_FLAG;
+	snprintf(buf, buf_size, "%s%s", is_reg ? "registration for " : "",
+		 get_res_raw_type_str(type));
 	return buf;
 }
 

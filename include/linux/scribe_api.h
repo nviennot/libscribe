@@ -139,10 +139,12 @@ struct scribe_event_queue_eof {
 } __attribute__((packed));
 
 
-#define SCRIBE_RES_TYPE_INODE	0
-#define SCRIBE_RES_TYPE_FILES	1
-
-#define SCRIBE_RES_TYPE_REGISTRATION(type) ((type) | 0x80)
+#define SCRIBE_RES_TYPE_RESERVED	0
+#define SCRIBE_RES_TYPE_INODE		1
+#define SCRIBE_RES_TYPE_FILES		2
+#define SCRIBE_RES_TYPE_REGISTRATION_FLAG 0x80
+#define SCRIBE_RES_TYPE_REGISTRATION(type) \
+	((type) | SCRIBE_RES_TYPE_REGISTRATION_FLAG)
 
 #define struct_SCRIBE_EVENT_RESOURCE_LOCK struct scribe_event_resource_lock
 struct scribe_event_resource_lock {
