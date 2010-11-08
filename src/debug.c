@@ -152,11 +152,14 @@ static char *get_syscall_str(char *buffer, unsigned int n)
 static char *get_type_str(int type)
 {
 #define __TYPE(t) if (type == t) return #t
+	__TYPE(SCRIBE_EVENT_INIT);
 	__TYPE(SCRIBE_EVENT_PID);
 	__TYPE(SCRIBE_EVENT_DATA);
 	__TYPE(SCRIBE_EVENT_SYSCALL);
 	__TYPE(SCRIBE_EVENT_SYSCALL_END);
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
+	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK);
+	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
@@ -171,6 +174,7 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
+	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
 #undef  __TYPE
 	return "unkown type";
 }
