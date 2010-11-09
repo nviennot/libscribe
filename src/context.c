@@ -221,6 +221,10 @@ static ssize_t _read(int fd, void *buf, size_t count)
 
 	while (count > 0) {
 		ret = read(fd, buf, count);
+		if (ret == 0) {
+			errno = ENODATA;
+			return -1;
+		}
 		if (ret < 0)
 			return ret;
 		buf = (char *)buf + ret;
