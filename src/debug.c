@@ -160,6 +160,7 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK);
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
+	__TYPE(SCRIBE_EVENT_RDTSC);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
@@ -383,6 +384,7 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       get_res_type_str(buffer1, sizeof(buffer1), e->type),
 	       e->serial);
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK, "resource unlock");
+	__TYPE(SCRIBE_EVENT_RDTSC, "rdtsc = %016llx", e->tsc);
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
