@@ -337,7 +337,8 @@ static const char *get_res_raw_type_str(int type)
 {
 	switch (type) {
 		case SCRIBE_RES_TYPE_INODE: return "inode";
-		case SCRIBE_RES_TYPE_FILES: return "files";
+		case SCRIBE_RES_TYPE_FILE: return "file";
+		case SCRIBE_RES_TYPE_FILES_STRUCT: return "files_struct";
 		default: return "unkown type";
 	}
 }

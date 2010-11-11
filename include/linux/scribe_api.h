@@ -143,9 +143,11 @@ struct scribe_event_queue_eof {
 } __attribute__((packed));
 
 
+/* Also defined in scribe_resource.h */
 #define SCRIBE_RES_TYPE_RESERVED	0
 #define SCRIBE_RES_TYPE_INODE		1
-#define SCRIBE_RES_TYPE_FILES		2
+#define SCRIBE_RES_TYPE_FILE		2
+#define SCRIBE_RES_TYPE_FILES_STRUCT	3
 #define SCRIBE_RES_TYPE_REGISTRATION_FLAG 0x80
 #define SCRIBE_RES_TYPE_REGISTRATION(type) \
 	((type) | SCRIBE_RES_TYPE_REGISTRATION_FLAG)
