@@ -27,6 +27,13 @@
 #include <linux/types.h>
 #include <scribe.h>
 
+#define GET_STR(table, n) ({ 				\
+	char *str;					\
+	if (n < sizeof(table##_str)/sizeof(char*))	\
+		str = table##_str[n];			\
+	else str = NULL;				\
+	str; })
+
 static char *syscall_str[] = {
 	"restart_syscall", "exit", "fork", "read", "write", "open", "close",
 	"waitpid", "creat", "link", "unlink", "execve", "chdir", "time",
@@ -98,6 +105,15 @@ static char *syscall_str[] = {
 	"eclone"
 };
 
+static char *get_syscall_str(char *buffer, unsigned int n)
+{
+	char *str = GET_STR(syscall, n);
+	if (str)
+		return str;
+	sprintf(buffer, "syscall_%d", n);
+	return buffer;
+}
+
 static char *error_str[] = {
 	"EPERM", "ENOENT", "ESRCH", "EINTR", "EIO", "ENXIO", "E2BIG",
 	"ENOEXEC", "EBADF", "ECHILD", "EAGAIN", "ENOMEM", "EACCES", "EFAULT",
@@ -132,54 +148,6 @@ static char *error_512_str[] = {
 	"EBADTYPE", "EJUKEBOX", "EIOCBQUEUED", "EIOCBRETRY"
 };
 
-#define GET_STR(table, n) ({ 				\
-	char *str;					\
-	if (n < sizeof(table##_str)/sizeof(char*))	\
-		str = table##_str[n];			\
-	else str = NULL;				\
-	str; })
-
-static char *get_syscall_str(char *buffer, unsigned int n)
-{
-	char *str = GET_STR(syscall, n);
-	if (str)
-		return str;
-	sprintf(buffer, "syscall_%d", n);
-	return buffer;
-
-}
-
-static char *get_type_str(int type)
-{
-#define __TYPE(t) if (type == t) return #t
-	__TYPE(SCRIBE_EVENT_INIT);
-	__TYPE(SCRIBE_EVENT_PID);
-	__TYPE(SCRIBE_EVENT_DATA);
-	__TYPE(SCRIBE_EVENT_SYSCALL);
-	__TYPE(SCRIBE_EVENT_SYSCALL_END);
-	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
-	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK);
-	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
-	__TYPE(SCRIBE_EVENT_RDTSC);
-
-	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
-	__TYPE(SCRIBE_EVENT_RECORD);
-	__TYPE(SCRIBE_EVENT_REPLAY);
-	__TYPE(SCRIBE_EVENT_STOP);
-
-	__TYPE(SCRIBE_EVENT_BACKTRACE);
-	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);
-
-	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE);
-	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE);
-	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE);
-	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
-	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
-	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
-#undef  __TYPE
-	return "unkown type";
-}
-
 #define MAX_ERRNO	4095
 #define IS_ERR_VALUE(x) ((x) >= (unsigned long)-MAX_ERRNO)
 static char *get_ret_str(char *buffer, long ret)
@@ -202,6 +170,56 @@ static char *get_ret_str(char *buffer, long ret)
 		sprintf(buffer, "%p", (void*)ret);
 	}
 	return buffer;
+}
+
+static char *signal_str[] = {
+	"SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGTRAP", "SIGABRT",
+	"SIGBUS", "SIGFPE", "SIGKILL", "SIGUSR1", "SIGSEGV", "SIGUSR2",
+	"SIGPIPE", "SIGALRM", "SIGTERM", "SIGSTKFLT", "SIGCHLD", "SIGCONT",
+	"SIGSTOP", "SIGTSTP", "SIGTTIN", "SIGTTOU", "SIGURG", "SIGXCPU",
+	"SIGXFSZ", "SIGVTALRM", "SIGPROF", "SIGWINCH", "SIGIO", "SIGPWR",
+	"SIGSYS"
+};
+
+static char *get_signal_str(char *buffer, int signr)
+{
+	char *str = GET_STR(signal, signr-1);
+	if (str)
+		return str;
+	sprintf(buffer, "SIGRTMIN+%d", signr-32);
+	return buffer;
+}
+
+static char *get_type_str(int type)
+{
+#define __TYPE(t) if (type == t) return #t
+	__TYPE(SCRIBE_EVENT_INIT);
+	__TYPE(SCRIBE_EVENT_PID);
+	__TYPE(SCRIBE_EVENT_DATA);
+	__TYPE(SCRIBE_EVENT_SYSCALL);
+	__TYPE(SCRIBE_EVENT_SYSCALL_END);
+	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
+	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK);
+	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
+	__TYPE(SCRIBE_EVENT_RDTSC);
+	__TYPE(SCRIBE_EVENT_SIGNAL);
+
+	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
+	__TYPE(SCRIBE_EVENT_RECORD);
+	__TYPE(SCRIBE_EVENT_REPLAY);
+	__TYPE(SCRIBE_EVENT_STOP);
+
+	__TYPE(SCRIBE_EVENT_BACKTRACE);
+	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);
+
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
+	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
+	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
+#undef  __TYPE
+	return "unkown type";
 }
 
 static char *escape_str(char *buf, ssize_t buf_size,
@@ -386,6 +404,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       e->serial);
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK, "resource unlock");
 	__TYPE(SCRIBE_EVENT_RDTSC, "rdtsc = %016llx", e->tsc);
+	__TYPE(SCRIBE_EVENT_SIGNAL, "signal: %s, info = %s",
+		      get_signal_str(buffer1, e->nr),
+		      escape_str(buffer2, 100, e->info, e->h.size));
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,

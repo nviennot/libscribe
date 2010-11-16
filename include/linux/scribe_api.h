@@ -39,6 +39,7 @@
 #define SCRIBE_PS_ENABLE_SYSCALL	0x00000100
 #define SCRIBE_PS_ENABLE_DATA		0x00000200
 #define SCRIBE_PS_ENABLE_RESOURCE	0x00000400
+#define SCRIBE_PS_ENABLE_SIGNAL		0x00000800
 #define SCRIBE_PS_ENABLE_TSC		0x00001000
 #define SCRIBE_PS_ENABLE_ALL		0x0000ff00
 
@@ -53,6 +54,7 @@ enum scribe_event_type {
 	SCRIBE_EVENT_RESOURCE_LOCK,
 	SCRIBE_EVENT_RESOURCE_UNLOCK,
 	SCRIBE_EVENT_RDTSC,
+	SCRIBE_EVENT_SIGNAL,
 
 	/* userspace -> kernel commands */
 	SCRIBE_EVENT_ATTACH_ON_EXECVE = 128,
@@ -170,6 +172,13 @@ struct scribe_event_rdtsc {
 	__u64 tsc;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_SIGNAL struct scribe_event_signal
+struct scribe_event_signal {
+	struct scribe_event_sized h;
+	__u8 nr;
+	__u8 info[0];
+} __attribute__((packed));
+
 /* Commands */
 
 #define struct_SCRIBE_EVENT_ATTACH_ON_EXECVE \
@@ -261,7 +270,8 @@ struct scribe_event_diverge_resource_type {
 static __always_inline int is_sized_type(int type)
 {
 	return  type == SCRIBE_EVENT_INIT ||
-		type == SCRIBE_EVENT_DATA;
+		type == SCRIBE_EVENT_DATA ||
+		type == SCRIBE_EVENT_SIGNAL;
 }
 
 static __always_inline int is_diverge_type(int type)
@@ -290,6 +300,7 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK);
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
 	__TYPE(SCRIBE_EVENT_RDTSC);
+	__TYPE(SCRIBE_EVENT_SIGNAL);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
