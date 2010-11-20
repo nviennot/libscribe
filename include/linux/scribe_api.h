@@ -71,6 +71,7 @@ enum scribe_event_type {
 	SCRIBE_EVENT_DIVERGE_DATA_PTR,
 	SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
 	SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
+	SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
 };
 
 struct scribe_event {
@@ -150,6 +151,7 @@ struct scribe_event_queue_eof {
 #define SCRIBE_RES_TYPE_INODE		1
 #define SCRIBE_RES_TYPE_FILE		2
 #define SCRIBE_RES_TYPE_FILES_STRUCT	3
+#define SCRIBE_RES_TYPE_TASK		4
 #define SCRIBE_RES_TYPE_REGISTRATION_FLAG 0x80
 #define SCRIBE_RES_TYPE_REGISTRATION(type) \
 	((type) | SCRIBE_RES_TYPE_REGISTRATION_FLAG)
@@ -267,6 +269,13 @@ struct scribe_event_diverge_resource_type {
 	__u8 type;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_DIVERGE_SYSCALL_RET \
+	struct scribe_event_diverge_syscall_ret
+struct scribe_event_diverge_syscall_ret {
+	struct scribe_event_diverge h;
+	__u32 ret;
+} __attribute__((packed));
+
 static __always_inline int is_sized_type(int type)
 {
 	return  type == SCRIBE_EVENT_INIT ||
@@ -281,7 +290,8 @@ static __always_inline int is_diverge_type(int type)
 		type == SCRIBE_EVENT_DIVERGE_DATA_TYPE ||
 		type == SCRIBE_EVENT_DIVERGE_DATA_PTR ||
 		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT ||
-		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE;
+		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE ||
+		type == SCRIBE_EVENT_DIVERGE_SYSCALL_RET;
 }
 
 void __you_are_using_an_unknown_scribe_type(void);
@@ -316,6 +326,7 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
 #undef  __TYPE
 
 	if (__builtin_constant_p(type))

@@ -218,6 +218,7 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
 #undef  __TYPE
 	return "unkown type";
 }
@@ -357,6 +358,7 @@ static const char *get_res_raw_type_str(int type)
 		case SCRIBE_RES_TYPE_INODE: return "inode";
 		case SCRIBE_RES_TYPE_FILE: return "file";
 		case SCRIBE_RES_TYPE_FILES_STRUCT: return "files_struct";
+		case SCRIBE_RES_TYPE_TASK: return "task";
 		default: return "unkown type";
 	}
 }
@@ -443,6 +445,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
 		"diverged on resource type, expected type = %s",
 		get_res_type_str(buffer1, sizeof(buffer1), e->type));
+	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
+		"diverged on syscall return value = %s",
+		get_ret_str(buffer1, e->ret));
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
