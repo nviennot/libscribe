@@ -226,6 +226,7 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_ADDRESS);
 #undef  __TYPE
 	return "unkown type";
 }
@@ -469,6 +470,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		get_ret_str(buffer1, e->ret));
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
 		"diverged on fence expected serial = %u", e->serial);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_ADDRESS,
+		"diverged on memory address, expected address = %08x",
+		e->address);
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
