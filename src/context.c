@@ -82,7 +82,7 @@ int scribe_context_destroy(scribe_context_t ctx)
 /* Direct kernel commands. They are not exported */
 static int _cmd(scribe_context_t ctx, void *event)
 {
-	size_t written, to_write;
+	ssize_t written, to_write;
 
 	to_write = sizeof_event((struct scribe_event *)event);
 	written = write(ctx->dev, event, to_write);

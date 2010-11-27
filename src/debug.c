@@ -203,6 +203,12 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
 	__TYPE(SCRIBE_EVENT_RDTSC);
 	__TYPE(SCRIBE_EVENT_SIGNAL);
+	__TYPE(SCRIBE_EVENT_FENCE);
+	__TYPE(SCRIBE_EVENT_MEM_OWNED_READ);
+	__TYPE(SCRIBE_EVENT_MEM_OWNED_WRITE);
+	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_READ);
+	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE);
+	__TYPE(SCRIBE_EVENT_MEM_ALONE);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
@@ -219,6 +225,7 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
+	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL);
 #undef  __TYPE
 	return "unkown type";
 }
@@ -409,6 +416,18 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_SIGNAL, "signal: %s, info = %s",
 		      get_signal_str(buffer1, e->nr),
 		      escape_str(buffer2, 100, e->info, e->h.size));
+	__TYPE(SCRIBE_EVENT_FENCE, "--fence(%u)--", e->serial);
+	__TYPE(SCRIBE_EVENT_MEM_OWNED_READ,
+	       "mem owned read, page = %08x, serial = %u",
+	       e->address, e->serial);
+	__TYPE(SCRIBE_EVENT_MEM_OWNED_WRITE,
+	       "mem owned write, page = %08x, serial = %u",
+	       e->address, e->serial);
+	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_READ,
+	       "mem public read-only, page = %08x", e->address);
+	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE,
+	       "mem public, page = %08x", e->address);
+	__TYPE(SCRIBE_EVENT_MEM_ALONE, "mem alone");
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
@@ -448,6 +467,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
 		"diverged on syscall return value = %s",
 		get_ret_str(buffer1, e->ret));
+	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
+		"diverged on fence expected serial = %u", e->serial);
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);

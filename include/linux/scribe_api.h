@@ -41,6 +41,7 @@
 #define SCRIBE_PS_ENABLE_RESOURCE	0x00000400
 #define SCRIBE_PS_ENABLE_SIGNAL		0x00000800
 #define SCRIBE_PS_ENABLE_TSC		0x00001000
+#define SCRIBE_PS_ENABLE_MM		0x00002000
 #define SCRIBE_PS_ENABLE_ALL		0x0000ff00
 
 enum scribe_event_type {
@@ -55,6 +56,12 @@ enum scribe_event_type {
 	SCRIBE_EVENT_RESOURCE_UNLOCK,
 	SCRIBE_EVENT_RDTSC,
 	SCRIBE_EVENT_SIGNAL,
+	SCRIBE_EVENT_FENCE,
+	SCRIBE_EVENT_MEM_OWNED_READ,
+	SCRIBE_EVENT_MEM_OWNED_WRITE,
+	SCRIBE_EVENT_MEM_PUBLIC_READ,
+	SCRIBE_EVENT_MEM_PUBLIC_WRITE,
+	SCRIBE_EVENT_MEM_ALONE,
 
 	/* userspace -> kernel commands */
 	SCRIBE_EVENT_ATTACH_ON_EXECVE = 128,
@@ -72,6 +79,7 @@ enum scribe_event_type {
 	SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
 	SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
 	SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
+	SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
 };
 
 struct scribe_event {
@@ -181,6 +189,43 @@ struct scribe_event_signal {
 	__u8 info[0];
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_FENCE struct scribe_event_fence
+struct scribe_event_fence {
+	struct scribe_event h;
+	__u32 serial;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_MEM_OWNED_READ struct scribe_event_mem_owned_read
+struct scribe_event_mem_owned_read {
+	struct scribe_event h;
+	__u32 address;
+	__u32 serial;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_MEM_OWNED_WRITE struct scribe_event_mem_owned_write
+struct scribe_event_mem_owned_write {
+	struct scribe_event h;
+	__u32 address;
+	__u32 serial;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_MEM_PUBLIC_READ struct scribe_event_mem_public_read
+struct scribe_event_mem_public_read {
+	struct scribe_event h;
+	__u32 address;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_MEM_PUBLIC_WRITE struct scribe_event_mem_public_write
+struct scribe_event_mem_public_write {
+	struct scribe_event h;
+	__u32 address;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_MEM_ALONE struct scribe_event_mem_alone
+struct scribe_event_mem_alone {
+	struct scribe_event h;
+} __attribute__((packed));
+
 /* Commands */
 
 #define struct_SCRIBE_EVENT_ATTACH_ON_EXECVE \
@@ -276,6 +321,14 @@ struct scribe_event_diverge_syscall_ret {
 	__u32 ret;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_DIVERGE_FENCE_SERIAL \
+	struct scribe_event_diverge_fence_serial
+struct scribe_event_diverge_fence_serial {
+	struct scribe_event_diverge h;
+	__u32 serial;
+} __attribute__((packed));
+
+
 static __always_inline int is_sized_type(int type)
 {
 	return  type == SCRIBE_EVENT_INIT ||
@@ -291,7 +344,8 @@ static __always_inline int is_diverge_type(int type)
 		type == SCRIBE_EVENT_DIVERGE_DATA_PTR ||
 		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT ||
 		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE ||
-		type == SCRIBE_EVENT_DIVERGE_SYSCALL_RET;
+		type == SCRIBE_EVENT_DIVERGE_SYSCALL_RET ||
+		type == SCRIBE_EVENT_DIVERGE_FENCE_SERIAL;
 }
 
 void __you_are_using_an_unknown_scribe_type(void);
@@ -311,6 +365,12 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
 	__TYPE(SCRIBE_EVENT_RDTSC);
 	__TYPE(SCRIBE_EVENT_SIGNAL);
+	__TYPE(SCRIBE_EVENT_FENCE);
+	__TYPE(SCRIBE_EVENT_MEM_OWNED_READ);
+	__TYPE(SCRIBE_EVENT_MEM_OWNED_WRITE);
+	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_READ);
+	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE);
+	__TYPE(SCRIBE_EVENT_MEM_ALONE);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
