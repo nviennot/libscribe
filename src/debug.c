@@ -226,7 +226,8 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL);
-	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_ADDRESS);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED);
 #undef  __TYPE
 	return "unkown type";
 }
@@ -367,17 +368,21 @@ static const char *get_res_raw_type_str(int type)
 		case SCRIBE_RES_TYPE_FILE: return "file";
 		case SCRIBE_RES_TYPE_FILES_STRUCT: return "files_struct";
 		case SCRIBE_RES_TYPE_TASK: return "task";
+		case SCRIBE_RES_TYPE_FUTEX: return "futex";
 		default: return "unkown type";
 	}
 }
 
 static char *get_res_type_str(char *buf, size_t buf_size, int type)
 {
-	int is_reg;
-	is_reg = type & SCRIBE_RES_TYPE_REGISTRATION_FLAG;
-	type &= ~SCRIBE_RES_TYPE_REGISTRATION_FLAG;
-	snprintf(buf, buf_size, "%s%s", is_reg ? "registration for " : "",
-		 get_res_raw_type_str(type));
+	int is_reg, is_spinlock;
+	is_reg = type & SCRIBE_RES_TYPE_REGISTRATION;
+	is_spinlock = type & SCRIBE_RES_TYPE_SPINLOCK;
+	type &= ~(SCRIBE_RES_TYPE_REGISTRATION | SCRIBE_RES_TYPE_SPINLOCK);
+	snprintf(buf, buf_size, "%s%s%s",
+		 is_reg ? "registration for " : "",
+		 get_res_raw_type_str(type),
+		 is_spinlock ? " (spinlock)" : "");
 	return buf;
 }
 
@@ -470,9 +475,11 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		get_ret_str(buffer1, e->ret));
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
 		"diverged on fence expected serial = %u", e->serial);
-	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_ADDRESS,
-		"diverged on memory address, expected address = %08x",
-		e->address);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED,
+		"diverged on memory access, trying to %s to address = %08x",
+		e->write_access ? "write" : "read", e->address);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED,
+	       "diverged on memory address, page not owned");
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);

@@ -80,7 +80,8 @@ enum scribe_event_type {
 	SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
 	SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
 	SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
-	SCRIBE_EVENT_DIVERGE_MEM_ADDRESS,
+	SCRIBE_EVENT_DIVERGE_MEM_OWNED,
+	SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED,
 };
 
 struct scribe_event {
@@ -161,9 +162,9 @@ struct scribe_event_queue_eof {
 #define SCRIBE_RES_TYPE_FILE		2
 #define SCRIBE_RES_TYPE_FILES_STRUCT	3
 #define SCRIBE_RES_TYPE_TASK		4
-#define SCRIBE_RES_TYPE_REGISTRATION_FLAG 0x80
-#define SCRIBE_RES_TYPE_REGISTRATION(type) \
-	((type) | SCRIBE_RES_TYPE_REGISTRATION_FLAG)
+#define SCRIBE_RES_TYPE_FUTEX		5
+#define SCRIBE_RES_TYPE_SPINLOCK	0x40
+#define SCRIBE_RES_TYPE_REGISTRATION	0x80
 
 #define struct_SCRIBE_EVENT_RESOURCE_LOCK struct scribe_event_resource_lock
 struct scribe_event_resource_lock {
@@ -329,11 +330,18 @@ struct scribe_event_diverge_fence_serial {
 	__u32 serial;
 } __attribute__((packed));
 
-#define struct_SCRIBE_EVENT_DIVERGE_MEM_ADDRESS \
-	struct scribe_event_diverge_mem_address
-struct scribe_event_diverge_mem_address {
+#define struct_SCRIBE_EVENT_DIVERGE_MEM_OWNED \
+	struct scribe_event_diverge_mem_owned
+struct scribe_event_diverge_mem_owned {
 	struct scribe_event_diverge h;
 	__u32 address;
+	__u8 write_access;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED \
+	struct scribe_event_diverge_mem_not_owned
+struct scribe_event_diverge_mem_not_owned {
+	struct scribe_event_diverge h;
 } __attribute__((packed));
 
 
@@ -354,7 +362,8 @@ static __always_inline int is_diverge_type(int type)
 		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE ||
 		type == SCRIBE_EVENT_DIVERGE_SYSCALL_RET ||
 		type == SCRIBE_EVENT_DIVERGE_FENCE_SERIAL ||
-		type == SCRIBE_EVENT_DIVERGE_MEM_ADDRESS;
+		type == SCRIBE_EVENT_DIVERGE_MEM_OWNED ||
+		type == SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED;
 }
 
 void __you_are_using_an_unknown_scribe_type(void);
@@ -397,7 +406,8 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL);
-	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_ADDRESS);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED);
+	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED);
 #undef  __TYPE
 
 	if (__builtin_constant_p(type))
