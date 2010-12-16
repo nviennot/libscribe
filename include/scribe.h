@@ -88,4 +88,22 @@ int scribe_is_replaying(void);
 int scribe_disable(void);
 int scribe_enable(void);
 
+static inline void clear_regs(void)
+{
+	__asm__ __volatile__ (
+		"pushf\n"
+		"pop %%eax\n"
+		"and $0, %%ax\n"
+		"push %%eax\n"
+		"popf\n"
+		"xor %%ebx, %%ebx\n"
+		"xor %%ecx, %%ecx\n"
+		"xor %%edx, %%edx\n"
+		"xor %%esi, %%esi\n"
+		"xor %%edi, %%edi\n"
+		"xor %%eax, %%eax\n"
+		: : : "ebx", "ecx", "edx", "esi", "edi", "eax"
+	);
+}
+
 #endif /*_SCRIBE_H */

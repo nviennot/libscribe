@@ -14,24 +14,22 @@
 
 
 #include <linux/types.h>
-#ifdef __KERNEL__
-#include <linux/list.h>
-#else
+#include <asm/ptrace.h>
+
 #ifndef __always_inline
 #define __always_inline inline
 #endif
 
-#endif /* __KERNEL__ */
-
 
 /* FIXME This has to go in <asm/errno.h> */
-#define EDIVERGE	200	/* Replay diverged */
+#define EDIVERGE			200	/* Replay diverged */
 
-#define SCRIBE_DEVICE_NAME	"scribe"
-#define SCRIBE_IDLE		0x00000000
-#define SCRIBE_RECORD		0x00000001
-#define SCRIBE_REPLAY		0x00000002
-#define SCRIBE_STOP		0x00000004
+#define SCRIBE_DEVICE_NAME		"scribe"
+
+#define SCRIBE_IDLE			0x00000000
+#define SCRIBE_RECORD			0x00000001
+#define SCRIBE_REPLAY			0x00000002
+#define SCRIBE_STOP			0x00000004
 
 #define SCRIBE_PS_RECORD		0x00000001
 #define SCRIBE_PS_REPLAY		0x00000002
@@ -62,6 +60,7 @@ enum scribe_event_type {
 	SCRIBE_EVENT_MEM_PUBLIC_READ,
 	SCRIBE_EVENT_MEM_PUBLIC_WRITE,
 	SCRIBE_EVENT_MEM_ALONE,
+	SCRIBE_EVENT_REGS,
 
 	/* userspace -> kernel commands */
 	SCRIBE_EVENT_ATTACH_ON_EXECVE = 128,
@@ -78,23 +77,15 @@ enum scribe_event_type {
 	SCRIBE_EVENT_DIVERGE_DATA_PTR,
 	SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
 	SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
+	SCRIBE_EVENT_DIVERGE_SYSCALL,
 	SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
 	SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
 	SCRIBE_EVENT_DIVERGE_MEM_OWNED,
 	SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED,
+	SCRIBE_EVENT_DIVERGE_REGS,
 };
 
 struct scribe_event {
-#ifdef __KERNEL__
-	struct list_head node;
-	loff_t log_offset; /* Only used during replay for back traces */
-	__u8 __align__[3];
-	char payload_offset[0];
-	/*
-	 * type must directly follow payload_offset,
-	 * serialization routines depend on it.
-	 */
-#endif
 	__u8 type;
 } __attribute__((packed));
 
@@ -106,6 +97,7 @@ struct scribe_event_sized {
 struct scribe_event_diverge {
 	struct scribe_event h;
 	__u32 pid;
+	__u64 last_event_offset;
 } __attribute__((packed));
 
 /* Log file */
@@ -228,6 +220,13 @@ struct scribe_event_mem_alone {
 	struct scribe_event h;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_REGS struct scribe_event_regs
+struct scribe_event_regs {
+	struct scribe_event h;
+	struct pt_regs regs;
+} __attribute__((packed));
+
+
 /* Commands */
 
 #define struct_SCRIBE_EVENT_ATTACH_ON_EXECVE \
@@ -316,6 +315,13 @@ struct scribe_event_diverge_resource_type {
 	__u8 type;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_DIVERGE_SYSCALL \
+	struct scribe_event_diverge_syscall
+struct scribe_event_diverge_syscall {
+	struct scribe_event_diverge h;
+	__u16 nr;
+} __attribute__((packed));
+
 #define struct_SCRIBE_EVENT_DIVERGE_SYSCALL_RET \
 	struct scribe_event_diverge_syscall_ret
 struct scribe_event_diverge_syscall_ret {
@@ -344,6 +350,28 @@ struct scribe_event_diverge_mem_not_owned {
 	struct scribe_event_diverge h;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_DIVERGE_REGS \
+	struct scribe_event_diverge_regs
+struct scribe_event_diverge_regs {
+	struct scribe_event_diverge h;
+	struct pt_regs regs;
+} __attribute__((packed));
+
+static inline int is_diverge_type(int type)
+{
+	return  type == SCRIBE_EVENT_DIVERGE_EVENT_TYPE ||
+		type == SCRIBE_EVENT_DIVERGE_EVENT_SIZE ||
+		type == SCRIBE_EVENT_DIVERGE_DATA_TYPE ||
+		type == SCRIBE_EVENT_DIVERGE_DATA_PTR ||
+		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT ||
+		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE ||
+		type == SCRIBE_EVENT_DIVERGE_SYSCALL ||
+		type == SCRIBE_EVENT_DIVERGE_SYSCALL_RET ||
+		type == SCRIBE_EVENT_DIVERGE_FENCE_SERIAL ||
+		type == SCRIBE_EVENT_DIVERGE_MEM_OWNED ||
+		type == SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED ||
+		type == SCRIBE_EVENT_DIVERGE_REGS;
+}
 
 static __always_inline int is_sized_type(int type)
 {
@@ -352,21 +380,7 @@ static __always_inline int is_sized_type(int type)
 		type == SCRIBE_EVENT_SIGNAL;
 }
 
-static __always_inline int is_diverge_type(int type)
-{
-	return  type == SCRIBE_EVENT_DIVERGE_EVENT_TYPE ||
-		type == SCRIBE_EVENT_DIVERGE_EVENT_SIZE ||
-		type == SCRIBE_EVENT_DIVERGE_DATA_TYPE ||
-		type == SCRIBE_EVENT_DIVERGE_DATA_PTR ||
-		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT ||
-		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE ||
-		type == SCRIBE_EVENT_DIVERGE_SYSCALL_RET ||
-		type == SCRIBE_EVENT_DIVERGE_FENCE_SERIAL ||
-		type == SCRIBE_EVENT_DIVERGE_MEM_OWNED ||
-		type == SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED;
-}
-
-void __you_are_using_an_unknown_scribe_type(void);
+void you_are_using_an_unknown_scribe_type(void);
 /*
  * XXX The additional payload of sized event is NOT accounted here.
  */
@@ -389,6 +403,7 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_READ);
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE);
 	__TYPE(SCRIBE_EVENT_MEM_ALONE);
+	__TYPE(SCRIBE_EVENT_REGS);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
@@ -404,14 +419,16 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL);
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED);
+	__TYPE(SCRIBE_EVENT_DIVERGE_REGS);
 #undef  __TYPE
 
 	if (__builtin_constant_p(type))
-		__you_are_using_an_unknown_scribe_type();
+		you_are_using_an_unknown_scribe_type();
 
 	return (size_t)-1;
 }

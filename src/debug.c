@@ -209,6 +209,7 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_READ);
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE);
 	__TYPE(SCRIBE_EVENT_MEM_ALONE);
+	__TYPE(SCRIBE_EVENT_REGS);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
@@ -224,10 +225,12 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
+	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL);
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED);
+	__TYPE(SCRIBE_EVENT_DIVERGE_REGS);
 #undef  __TYPE
 	return "unkown type";
 }
@@ -386,6 +389,19 @@ static char *get_res_type_str(char *buf, size_t buf_size, int type)
 	return buf;
 }
 
+static char *get_regs_str(char *buf, size_t buf_size, struct pt_regs *regs)
+{
+	snprintf(buf, buf_size,
+		 "eip: %04x:%08lx, eflags: %08lx, "
+		 "eax: %08lx, ebx: %08lx, ecx: %08lx, edx: %08lx "
+		 "esi: %08lx, edi: %08lx, ebp: %08lx, esp: %08lx "
+		 "ds: %04x, es: %04x, fs: %04x, ss: %04x",
+		 regs->xcs, regs->eip, regs->eflags,
+		 regs->eax, regs->ebx, regs->ecx, regs->edx,
+		 regs->esi, regs->edi, regs->ebp, regs->esp,
+		 (__u16)regs->xds, (__u16)regs->xes, (__u16)regs->xfs, (__u16)regs->xss);
+	return buf;
+}
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
@@ -405,12 +421,12 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       get_strv_str(buffer2, 50, (char *)e->data, e->argc, e->envc));
 	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);
 	__TYPE(SCRIBE_EVENT_DATA, "data: %s, ptr = %p, size = %u, %s",
-		      get_data_type_str(e->data_type),
-		      (void *)e->user_ptr, e->h.size,
-		      escape_str(buffer1, 100, e->data, e->h.size));
+	       get_data_type_str(e->data_type),
+	       (void *)e->user_ptr, e->h.size,
+	       escape_str(buffer1, 100, e->data, e->h.size));
 	__TYPE(SCRIBE_EVENT_SYSCALL, "%s() = %s",
-		      get_syscall_str(buffer1, e->nr),
-		      get_ret_str(buffer2, e->ret));
+	       get_syscall_str(buffer1, e->nr),
+	       get_ret_str(buffer2, e->ret));
 	__TYPE(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK,
@@ -420,8 +436,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK, "resource unlock");
 	__TYPE(SCRIBE_EVENT_RDTSC, "rdtsc = %016llx", e->tsc);
 	__TYPE(SCRIBE_EVENT_SIGNAL, "signal: %s, info = %s",
-		      get_signal_str(buffer1, e->nr),
-		      escape_str(buffer2, 100, e->info, e->h.size));
+	       get_signal_str(buffer1, e->nr),
+	       escape_str(buffer2, 100, e->info, e->h.size));
 	__TYPE(SCRIBE_EVENT_FENCE, "--fence(%u)--", e->serial);
 	__TYPE(SCRIBE_EVENT_MEM_OWNED_READ,
 	       "mem owned read, page = %08x, serial = %u",
@@ -434,52 +450,58 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE,
 	       "mem public, page = %08x", e->address);
 	__TYPE(SCRIBE_EVENT_MEM_ALONE, "mem alone");
+	__TYPE(SCRIBE_EVENT_REGS, "regs: %s",
+	       get_regs_str(buffer1, sizeof(buffer1), &e->regs));
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
-		      "attach_on_execve: %d", e->enable);
+	       "attach_on_execve: %d", e->enable);
 	__TYPE(SCRIBE_EVENT_RECORD,
-		      "start recording, logfd = %d", e->log_fd);
+	       "start recording, logfd = %d", e->log_fd);
 	__TYPE(SCRIBE_EVENT_REPLAY,
-		      "start replaying, logfd = %d, backtrace_len = %d",
-		      e->log_fd, e->backtrace_len);
+	       "start replaying, logfd = %d, backtrace_len = %d",
+	       e->log_fd, e->backtrace_len);
 	__TYPE(SCRIBE_EVENT_STOP, "stop request");
 
 
 	__TYPE(SCRIBE_EVENT_BACKTRACE,
-		      "backtrace: offset = %lld", e->event_offset);
+	       "backtrace: offset = %lld", e->event_offset);
 	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE,
-		      "context idle: error = %d", e->error);
+	       "context idle: error = %d", e->error);
 
 
 	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE,
-		      "diverged on event type, expected type = %s",
-		      get_type_str(e->type));
+	       "event type = %s",
+	       get_type_str(e->type));
 	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE,
-		      "diverged on event size, expected size = %d", e->size);
+	       "event size = %d", e->size);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE,
-		      "diverged on data type, expected type = %s",
-		      get_data_type_str(e->type));
+	       "data type = %s",
+	       get_data_type_str(e->type));
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR,
-		      "diverged on data ptr, expected user ptr = %p",
-		      (void *)e->user_ptr);
+	       "data user ptr = %p",
+	       (void *)e->user_ptr);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
-		      "diverged on data content, offset = %d, %s", e->offset,
-		      get_diverge_data_str(buffer1, 100, e->offset,
-					   (char *)e->data, e->size));
+	       "data content, offset = %d, %s", e->offset,
+	       get_diverge_data_str(buffer1, 100, e->offset,
+				    (char *)e->data, e->size));
 	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
-		"diverged on resource type, expected type = %s",
-		get_res_type_str(buffer1, sizeof(buffer1), e->type));
+	       "resource type = %s",
+	       get_res_type_str(buffer1, sizeof(buffer1), e->type));
+	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL,
+	       "%s()", get_syscall_str(buffer1, e->nr));
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
-		"diverged on syscall return value = %s",
-		get_ret_str(buffer1, e->ret));
+	       "syscall return value = %s",
+	       get_ret_str(buffer1, e->ret));
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
-		"diverged on fence expected serial = %u", e->serial);
+	       "fence serial = %u", e->serial);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED,
-		"diverged on memory access, trying to %s to address = %08x",
-		e->write_access ? "write" : "read", e->address);
+	       "memory access, trying to %s to address = %08x",
+	       e->write_access ? "write" : "read", e->address);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED,
-	       "diverged on memory address, page not owned");
+	       "memory address, page not owned");
+	__TYPE(SCRIBE_EVENT_DIVERGE_REGS, "regs: %s",
+	       get_regs_str(buffer1, sizeof(buffer1), &e->regs));
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
