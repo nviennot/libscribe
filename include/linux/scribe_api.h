@@ -22,6 +22,7 @@
 #include <linux/types.h>
 #include <linux/ptrace.h>
 
+#include <sys/types.h>
 #ifndef __always_inline
 #define __always_inline inline
 #endif
