@@ -190,7 +190,7 @@ static char *get_signal_str(char *buffer, int signr)
 	return buffer;
 }
 
-static char *get_type_str(int type)
+static char *get_type_str(char *buffer, int type)
 {
 #define __TYPE(t) if (type == t) return #t
 	__TYPE(SCRIBE_EVENT_INIT);
@@ -232,7 +232,9 @@ static char *get_type_str(int type)
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED);
 	__TYPE(SCRIBE_EVENT_DIVERGE_REGS);
 #undef  __TYPE
-	return "unkown type";
+
+	sprintf(buffer, "unkown type: %d", type);
+	return buffer;
 }
 
 static char *escape_str(char *buf, ssize_t buf_size,
@@ -472,7 +474,7 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 
 	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE,
 	       "event type = %s",
-	       get_type_str(e->type));
+	       get_type_str(buffer1, e->type));
 	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE,
 	       "event size = %d", e->size);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE,

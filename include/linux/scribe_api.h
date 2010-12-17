@@ -9,28 +9,34 @@
  *  distribution for more details.
  */
 
+/*
+ * This is the include file that gets shared with userspace.
+ * It describes the events that are used in two places:
+ * - The logfile, which is the output of a scribe recording
+ * - The protocol of the scribe device (through read() and write()).
+ */
+
 #ifndef _LINUX_SCRIBE_API_H
 #define _LINUX_SCRIBE_API_H
 
-
 #include <linux/types.h>
-#include <asm/ptrace.h>
+#include <linux/ptrace.h>
 
 #ifndef __always_inline
 #define __always_inline inline
 #endif
 
-
-/* FIXME This has to go in <asm/errno.h> */
+/*
+ * FIXME This file contain architecture dependent code, such as EDIVERGE,
+ * the 32/64bits values, the pt_regs struct...
+ */
 #define EDIVERGE			200	/* Replay diverged */
 
 #define SCRIBE_DEVICE_NAME		"scribe"
 
-#define SCRIBE_IDLE			0x00000000
-#define SCRIBE_RECORD			0x00000001
-#define SCRIBE_REPLAY			0x00000002
-#define SCRIBE_STOP			0x00000004
-
+/*
+ * Thoses flags are used for the scribe syscalls such as sys_set_scribe_flags().
+ */
 #define SCRIBE_PS_RECORD		0x00000001
 #define SCRIBE_PS_REPLAY		0x00000002
 #define SCRIBE_PS_ATTACH_ON_EXEC	0x00000004
@@ -115,6 +121,7 @@ struct scribe_event_pid {
 	__u32 pid;
 } __attribute__((packed));
 
+/* Some of those flags are also defined in scribe_uaccess.h */
 #define SCRIBE_DATA_INPUT		0x01
 #define SCRIBE_DATA_STRING		0x02
 #define SCRIBE_DATA_NON_DETERMINISTIC	0x04
@@ -148,7 +155,7 @@ struct scribe_event_queue_eof {
 } __attribute__((packed));
 
 
-/* Also defined in scribe_resource.h */
+/* Those flags are also defined in scribe_resource.h */
 #define SCRIBE_RES_TYPE_RESERVED	0
 #define SCRIBE_RES_TYPE_INODE		1
 #define SCRIBE_RES_TYPE_FILE		2
@@ -440,5 +447,6 @@ static inline size_t sizeof_event(struct scribe_event *event)
 		sz += ((struct scribe_event_sized *)event)->size;
 	return sz;
 }
+
 
 #endif /* _LINUX_SCRIBE_API_H_ */

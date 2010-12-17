@@ -57,7 +57,6 @@ int scribe_context_create(scribe_context_t *pctx, struct scribe_operations *ops,
 
 	ctx->dev = open(SCRIBE_DEV_PATH, O_RDWR);
 	if (ctx->dev < 0) {
-		fprintf(stderr, "cannot open " SCRIBE_DEV_PATH "\n");
 		free(ctx);
 		return -1;
 	}
@@ -173,7 +172,10 @@ bad:
 	return 1;
 }
 
-#define STACK_SIZE 4*4096
+#define STACK_SIZE (4*4096)
+
+#define SCRIBE_RECORD	0
+#define SCRIBE_REPLAY	1
 
 static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
 			  int log_fd, int backtrace_len,
