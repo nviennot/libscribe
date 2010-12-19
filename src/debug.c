@@ -210,11 +210,15 @@ static char *get_type_str(char *buffer, int type)
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE);
 	__TYPE(SCRIBE_EVENT_MEM_ALONE);
 	__TYPE(SCRIBE_EVENT_REGS);
+	__TYPE(SCRIBE_EVENT_BOOKMARK);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
 	__TYPE(SCRIBE_EVENT_REPLAY);
 	__TYPE(SCRIBE_EVENT_STOP);
+	__TYPE(SCRIBE_EVENT_BOOKMARK_REQUEST);
+	__TYPE(SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK);
+	__TYPE(SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID);
 
 	__TYPE(SCRIBE_EVENT_BACKTRACE);
 	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);
@@ -504,6 +508,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "memory address, page not owned");
 	__TYPE(SCRIBE_EVENT_DIVERGE_REGS, "regs: %s",
 	       get_regs_str(buffer1, sizeof(buffer1), &e->regs));
+	__TYPE(SCRIBE_EVENT_BOOKMARK,
+	       "bookmark, id = %u, npr = %u", e->id, e->npr);
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);

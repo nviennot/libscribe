@@ -41,6 +41,7 @@
 #define SCRIBE_PS_RECORD		0x00000001
 #define SCRIBE_PS_REPLAY		0x00000002
 #define SCRIBE_PS_ATTACH_ON_EXEC	0x00000004
+#define SCRIBE_PS_DETACHING		0x00000008
 #define SCRIBE_PS_ENABLE_SYSCALL	0x00000100
 #define SCRIBE_PS_ENABLE_DATA		0x00000200
 #define SCRIBE_PS_ENABLE_RESOURCE	0x00000400
@@ -68,12 +69,16 @@ enum scribe_event_type {
 	SCRIBE_EVENT_MEM_PUBLIC_WRITE,
 	SCRIBE_EVENT_MEM_ALONE,
 	SCRIBE_EVENT_REGS,
+	SCRIBE_EVENT_BOOKMARK,
 
 	/* userspace -> kernel commands */
 	SCRIBE_EVENT_ATTACH_ON_EXECVE = 128,
 	SCRIBE_EVENT_RECORD,
 	SCRIBE_EVENT_REPLAY,
 	SCRIBE_EVENT_STOP,
+	SCRIBE_EVENT_BOOKMARK_REQUEST,
+	SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK,
+	SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID,
 
 	/* kernel -> userspace notifications */
 	SCRIBE_EVENT_BACKTRACE,
@@ -234,6 +239,12 @@ struct scribe_event_regs {
 	struct pt_regs regs;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_BOOKMARK struct scribe_event_bookmark
+struct scribe_event_bookmark {
+	struct scribe_event h;
+	__u32 id;
+	__u32 npr;
+} __attribute__((packed));
 
 /* Commands */
 
@@ -262,6 +273,24 @@ struct scribe_event_stop {
 	struct scribe_event h;
 } __attribute__((packed));
 
+#define struct_SCRIBE_EVENT_BOOKMARK_REQUEST \
+	struct scribe_event_bookmark_request
+struct scribe_event_bookmark_request {
+	struct scribe_event h;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK \
+	struct scribe_event_golive_on_next_bookmark
+struct scribe_event_golive_on_next_bookmark {
+	struct scribe_event h;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID \
+	struct scribe_event_golive_on_bookmark_id
+struct scribe_event_golive_on_bookmark_id {
+	struct scribe_event h;
+	__u32 id;
+} __attribute__((packed));
 
 /* Notifications */
 
@@ -412,11 +441,15 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE);
 	__TYPE(SCRIBE_EVENT_MEM_ALONE);
 	__TYPE(SCRIBE_EVENT_REGS);
+	__TYPE(SCRIBE_EVENT_BOOKMARK);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
 	__TYPE(SCRIBE_EVENT_REPLAY);
 	__TYPE(SCRIBE_EVENT_STOP);
+	__TYPE(SCRIBE_EVENT_BOOKMARK_REQUEST);
+	__TYPE(SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK);
+	__TYPE(SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID);
 
 	__TYPE(SCRIBE_EVENT_BACKTRACE);
 	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);

@@ -38,6 +38,7 @@
 
 struct scribe_context {
 	int dev;
+	int mode;
 	struct scribe_operations *ops;
 	void *private_data;
 	loff_t *backtrace;
@@ -61,6 +62,7 @@ int scribe_context_create(scribe_context_t *pctx, struct scribe_operations *ops,
 		return -1;
 	}
 
+	ctx->mode = 0;
 	ctx->ops = ops;
 	ctx->private_data = private_data;
 
@@ -96,32 +98,50 @@ static int _cmd(scribe_context_t ctx, void *event)
 
 	return 0;
 }
-static int cmd_record(scribe_context_t ctx, int log_fd)
+static int __scribe_record(scribe_context_t ctx, int log_fd)
 {
 	struct scribe_event_record e =
 		{.h = {.type = SCRIBE_EVENT_RECORD}, .log_fd = log_fd};
 	return _cmd(ctx, &e);
 }
-static int cmd_replay(scribe_context_t ctx, int log_fd, int backtrace_len)
+static int __scribe_replay(scribe_context_t ctx, int log_fd, int backtrace_len)
 {
 	struct scribe_event_replay e =
 		{.h = {.type = SCRIBE_EVENT_REPLAY},
 			.log_fd = log_fd, .backtrace_len = backtrace_len };
 	return _cmd(ctx, &e);
 }
-static int cmd_stop(scribe_context_t ctx)
+static int __scribe_stop(scribe_context_t ctx)
 {
 	struct scribe_event_stop e = {.h = {.type = SCRIBE_EVENT_STOP}};
 	return _cmd(ctx, &e);
 }
-static int cmd_attach_on_execve(scribe_context_t ctx, int enable)
+static int scribe_attach_on_execve(scribe_context_t ctx, int enable)
 {
 	struct scribe_event_attach_on_execve e =
 		{.h = {.type = SCRIBE_EVENT_ATTACH_ON_EXECVE},
 			.enable = !!enable};
 	return _cmd(ctx, &e);
 }
-
+int scribe_bookmark(scribe_context_t ctx)
+{
+	struct scribe_event_bookmark_request e =
+		{.h = {.type = SCRIBE_EVENT_BOOKMARK_REQUEST}};
+	return _cmd(ctx, &e);
+}
+static int scribe_golive_on_next_bookmark(scribe_context_t ctx)
+{
+	struct scribe_event_golive_on_next_bookmark e =
+		{.h = {.type = SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK}};
+	return _cmd(ctx, &e);
+}
+static int scribe_golive_on_bookmark(scribe_context_t ctx, int id)
+{
+	struct scribe_event_golive_on_bookmark_id e =
+		{.h = {.type = SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID},
+			.id = id};
+	return _cmd(ctx, &e);
+}
 
 static void default_init_loader(char *const *argv, char *const *envp)
 {
@@ -152,7 +172,7 @@ static int init_process(void *_fn_args)
 	umount2("/proc", MNT_DETACH);
 	mount("proc", "/proc", "proc", 0, NULL);
 
-	if (cmd_attach_on_execve(ctx, 1))
+	if (scribe_attach_on_execve(ctx, 1))
 		goto bad;
 
 	/*
@@ -174,11 +194,11 @@ bad:
 
 #define STACK_SIZE (4*4096)
 
-#define SCRIBE_RECORD	0
-#define SCRIBE_REPLAY	1
+#define SCRIBE_RECORD	1
+#define SCRIBE_REPLAY	2
 
 static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
-			  int log_fd, int backtrace_len,
+			  int log_fd, int backtrace_len, int golive_bookmark_id,
 			  char *const *argv, char *const *envp)
 {
 	struct child_args fn_args = {
@@ -196,13 +216,18 @@ static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
 		return -1;
 
 	if (action == SCRIBE_RECORD)
-		ret = cmd_record(ctx, log_fd);
+		ret = __scribe_record(ctx, log_fd);
 	else
-		ret = cmd_replay(ctx, log_fd, backtrace_len);
+		ret = __scribe_replay(ctx, log_fd, backtrace_len);
+
+	if (!ret && golive_bookmark_id != -1)
+		ret |= scribe_golive_on_bookmark(ctx, golive_bookmark_id);
+
 	if (ret) {
 		free(stack);
 		return -1;
 	}
+
 
 	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD;
 	init_pid = clone(init_process, stack + STACK_SIZE, clone_flags, &fn_args);
@@ -213,6 +238,7 @@ static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
 		return -1;
 	}
 
+	ctx->mode = action;
 	return init_pid;
 }
 
@@ -370,13 +396,14 @@ pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
 	}
 
 	ret = scribe_start(ctx, SCRIBE_RECORD, flags, log_fd,
-			   0, argv, envp);
+			   0, -1, argv, envp);
 
 	free(new_argv);
 	return ret;
 }
 
-pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len)
+pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
+		    int backtrace_len, int golive_bookmark_id)
 {
 	pid_t ret;
 	void *data;
@@ -396,7 +423,7 @@ pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_l
 	}
 
 	ret = scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd,
-			   backtrace_len, argv, envp);
+			   backtrace_len, golive_bookmark_id, argv, envp);
 	free(data);
 	return ret;
 }
@@ -444,6 +471,7 @@ int scribe_wait(scribe_context_t ctx)
 
 int scribe_stop(scribe_context_t ctx)
 {
-	return cmd_stop(ctx);
+	if (ctx->mode == SCRIBE_REPLAY)
+		return scribe_golive_on_next_bookmark(ctx);
+	return __scribe_stop(ctx);
 }
-

@@ -58,9 +58,11 @@ int scribe_context_destroy(scribe_context_t ctx);
 /*
  * Start record/replay with a command line. Returns the pid of the init
  * process.
+ * when golive_bookmark_id != -1, the replay will golive on a specific
+ * bookmark.
  */
 pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv, char *const *envp);
-pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len);
+pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len, int golive_bookmark_id);
 
 /*
  * Wait for the record/replay to finish. It also allow your notifications to
@@ -72,9 +74,16 @@ int scribe_wait(scribe_context_t ctx);
 
 /*
  * Abort the record: It will stop the recording ASAP.
- * Abort the replay: It will go live when it can.
+ * Abort the replay: It will go live when it can (right now, it will do so on
+ * the next bookmark).
  */
 int scribe_stop(scribe_context_t ctx);
+
+/*
+ * Request a bookmark during the recording. All processes will sync together,
+ * and a bookmark event will be written in the log file.
+ */
+int scribe_bookmark(scribe_context_t ctx);
 
 /*
  * scribe_get_event_str() returns the string representation of an event
