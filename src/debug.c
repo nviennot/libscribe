@@ -436,10 +436,11 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK,
-	       "resource lock, type = %s, serial = %u",
+	       "resource lock, type = %s, object = %p, serial = %u",
 	       get_res_type_str(buffer1, sizeof(buffer1), e->type),
-	       e->serial);
-	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK, "resource unlock");
+	       (void *)e->object, e->serial);
+	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK,
+	       "resource unlock, object = %p", (void *)e->object);
 	__TYPE(SCRIBE_EVENT_RDTSC, "rdtsc = %016llx", e->tsc);
 	__TYPE(SCRIBE_EVENT_SIGNAL, "signal: %s, info = %s",
 	       get_signal_str(buffer1, e->nr),

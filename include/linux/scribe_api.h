@@ -175,12 +175,14 @@ struct scribe_event_queue_eof {
 struct scribe_event_resource_lock {
 	struct scribe_event h;
 	__u8 type;
+	__u32 object;
 	__u32 serial;
 } __attribute__((packed));
 
 #define struct_SCRIBE_EVENT_RESOURCE_UNLOCK struct scribe_event_resource_unlock
 struct scribe_event_resource_unlock {
 	struct scribe_event h;
+	__u32 object;
 } __attribute__((packed));
 
 #define struct_SCRIBE_EVENT_RDTSC struct scribe_event_rdtsc
