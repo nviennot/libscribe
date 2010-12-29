@@ -70,6 +70,8 @@ enum scribe_event_type {
 	SCRIBE_EVENT_MEM_ALONE,
 	SCRIBE_EVENT_REGS,
 	SCRIBE_EVENT_BOOKMARK,
+	SCRIBE_EVENT_SIG_SEND_COOKIE,
+	SCRIBE_EVENT_SIG_RECV_COOKIE,
 
 	/* userspace -> kernel commands */
 	SCRIBE_EVENT_ATTACH_ON_EXECVE = 128,
@@ -246,6 +248,18 @@ struct scribe_event_bookmark {
 	struct scribe_event h;
 	__u32 id;
 	__u32 npr;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_SIG_SEND_COOKIE struct scribe_event_sig_send_cookie
+struct scribe_event_sig_send_cookie {
+	struct scribe_event h;
+	__u32 cookie;
+} __attribute__((packed));
+
+#define struct_SCRIBE_EVENT_SIG_RECV_COOKIE struct scribe_event_sig_recv_cookie
+struct scribe_event_sig_recv_cookie {
+	struct scribe_event h;
+	__u32 cookie;
 } __attribute__((packed));
 
 /* Commands */
@@ -444,6 +458,8 @@ static __always_inline size_t sizeof_event_from_type(__u8 type)
 	__TYPE(SCRIBE_EVENT_MEM_ALONE);
 	__TYPE(SCRIBE_EVENT_REGS);
 	__TYPE(SCRIBE_EVENT_BOOKMARK);
+	__TYPE(SCRIBE_EVENT_SIG_SEND_COOKIE);
+	__TYPE(SCRIBE_EVENT_SIG_RECV_COOKIE);
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
 	__TYPE(SCRIBE_EVENT_RECORD);
