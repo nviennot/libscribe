@@ -47,7 +47,7 @@
 #define SCRIBE_RES_EXTRA		0x00000800
 #define SCRIBE_SIG_COOKIE		0x00001000
 #define SCRIBE_ALL			0x0000ff00
-
+#define SCRIBE_DEFAULT			0
 /*
  * These flags are used for the scribe syscalls such as sys_set_scribe_flags().
  */

@@ -98,17 +98,20 @@ static int _cmd(scribe_context_t ctx, void *event)
 
 	return 0;
 }
-static int __scribe_record(scribe_context_t ctx, int log_fd)
+static int __scribe_record(scribe_context_t ctx, int flags, int log_fd)
 {
 	struct scribe_event_record e =
-		{.h = {.type = SCRIBE_EVENT_RECORD}, .log_fd = log_fd};
+		{.h = {.type = SCRIBE_EVENT_RECORD},
+			.flags = flags, .log_fd = log_fd};
 	return _cmd(ctx, &e);
 }
-static int __scribe_replay(scribe_context_t ctx, int log_fd, int backtrace_len)
+static int __scribe_replay(scribe_context_t ctx, int flags, int log_fd,
+			   int backtrace_len)
 {
 	struct scribe_event_replay e =
 		{.h = {.type = SCRIBE_EVENT_REPLAY},
-			.log_fd = log_fd, .backtrace_len = backtrace_len };
+			.flags = flags, .log_fd = log_fd,
+			.backtrace_len = backtrace_len };
 	return _cmd(ctx, &e);
 }
 static int __scribe_stop(scribe_context_t ctx)
@@ -216,9 +219,9 @@ static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
 		return -1;
 
 	if (action == SCRIBE_RECORD)
-		ret = __scribe_record(ctx, log_fd);
+		ret = __scribe_record(ctx, flags, log_fd);
 	else
-		ret = __scribe_replay(ctx, log_fd, backtrace_len);
+		ret = __scribe_replay(ctx, flags, log_fd, backtrace_len);
 
 	if (!ret && golive_bookmark_id != -1)
 		ret |= scribe_golive_on_bookmark(ctx, golive_bookmark_id);
@@ -276,7 +279,8 @@ static ssize_t _write(int fd, const void *buf, size_t count)
 	return to_write;
 }
 
-static int save_init(int log_fd, char *const *argv, char *const *envp)
+static int save_init(int log_fd, int flags,
+		     char *const *argv, char *const *envp)
 {
 	struct scribe_event_init *e;
 	int argc, envc;
@@ -296,6 +300,7 @@ static int save_init(int log_fd, char *const *argv, char *const *envp)
 
 	e->h.h.type = SCRIBE_EVENT_INIT;
 	e->h.size = size;
+	e->flags = flags;
 	e->argc = argc;
 	e->envc = envc;
 	data = (char *)e->data;
@@ -315,7 +320,8 @@ static int save_init(int log_fd, char *const *argv, char *const *envp)
 	return 0;
 }
 
-static int restore_init(int log_fd, void **_data, char ***_argv, char ***_envp)
+static int restore_init(int log_fd, int *flags,
+			void **_data, char ***_argv, char ***_envp)
 {
 	struct scribe_event_init e;
 	char *data = NULL;
@@ -332,6 +338,7 @@ static int restore_init(int log_fd, void **_data, char ***_argv, char ***_envp)
 	argv = (char **)(data + e.h.size);
 	envp = argv + e.argc + 1;
 
+	*flags = e.flags;
 	*_data = data;
 	*_argv = argv;
 	*_envp = envp;
@@ -390,7 +397,7 @@ pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
 	if (!envp)
 		envp = environ;
 
-	if (save_init(log_fd, argv, envp) < 0) {
+	if (save_init(log_fd, flags, argv, envp) < 0) {
 		free(new_argv);
 		return -1;
 	}
@@ -409,7 +416,7 @@ pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
 	void *data;
 	char **argv, **envp;
 
-	if (restore_init(log_fd, &data, &argv, &envp) < 0)
+	if (restore_init(log_fd, &flags, &data, &argv, &envp) < 0)
 		return -1;
 
 	if (backtrace_len) {

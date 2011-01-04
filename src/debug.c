@@ -381,7 +381,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		snprintf(str, size, fmt, ##__VA_ARGS__);	\
 		return str;					\
 	}
-	__TYPE(SCRIBE_EVENT_INIT, "init: argv=\"%s\", envp=\"%s\"",
+	__TYPE(SCRIBE_EVENT_INIT,
+	       "init: flags = %08x, argv = \"%s\", envp = \"%s\"",
+	       e->flags,
 	       get_strv_str(buffer1, 100, (char *)e->data, 0, e->argc),
 	       get_strv_str(buffer2, 50, (char *)e->data, e->argc, e->envc));
 	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);

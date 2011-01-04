@@ -60,6 +60,8 @@ int scribe_context_destroy(scribe_context_t ctx);
  * process.
  * when golive_bookmark_id != -1, the replay will golive on a specific
  * bookmark.
+ * You may pass SCRIBE_DEFAULT or SCRIBE_ALL or a combination as @flags.
+ * For replay @flags has no effect (the one used for the recording are used).
  */
 pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv, char *const *envp);
 pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len, int golive_bookmark_id);
