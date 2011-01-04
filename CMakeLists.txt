@@ -12,4 +12,5 @@ install(TARGETS scribe scribe_init
 	RUNTIME DESTINATION /usr/bin
 )
 install(FILES include/scribe.h DESTINATION /usr/include)
+install(FILES include/linux/scribe_events.h DESTINATION /usr/include/linux)
 install(FILES include/linux/scribe_api.h DESTINATION /usr/include/linux)

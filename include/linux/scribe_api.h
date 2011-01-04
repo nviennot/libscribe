@@ -51,52 +51,15 @@
 #define SCRIBE_PS_ENABLE_ALL		0x0000ff00
 
 enum scribe_event_type {
-	/* log file events */
-	SCRIBE_EVENT_INIT = 1,
-	SCRIBE_EVENT_PID,
-	SCRIBE_EVENT_DATA,
-	SCRIBE_EVENT_SYSCALL,
-	SCRIBE_EVENT_SYSCALL_END,
-	SCRIBE_EVENT_QUEUE_EOF,
-	SCRIBE_EVENT_RESOURCE_LOCK,
-	SCRIBE_EVENT_RESOURCE_UNLOCK,
-	SCRIBE_EVENT_RDTSC,
-	SCRIBE_EVENT_SIGNAL,
-	SCRIBE_EVENT_FENCE,
-	SCRIBE_EVENT_MEM_OWNED_READ,
-	SCRIBE_EVENT_MEM_OWNED_WRITE,
-	SCRIBE_EVENT_MEM_PUBLIC_READ,
-	SCRIBE_EVENT_MEM_PUBLIC_WRITE,
-	SCRIBE_EVENT_MEM_ALONE,
-	SCRIBE_EVENT_REGS,
-	SCRIBE_EVENT_BOOKMARK,
-	SCRIBE_EVENT_SIG_SEND_COOKIE,
-	SCRIBE_EVENT_SIG_RECV_COOKIE,
+	SCRIBE_EVENT_DUMMY1 = 0, /* skip the type 0 for safety */
 
-	/* userspace -> kernel commands */
-	SCRIBE_EVENT_ATTACH_ON_EXECVE = 128,
-	SCRIBE_EVENT_RECORD,
-	SCRIBE_EVENT_REPLAY,
-	SCRIBE_EVENT_STOP,
-	SCRIBE_EVENT_BOOKMARK_REQUEST,
-	SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK,
-	SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID,
-
-	/* kernel -> userspace notifications */
-	SCRIBE_EVENT_BACKTRACE,
-	SCRIBE_EVENT_CONTEXT_IDLE,
-	SCRIBE_EVENT_DIVERGE_EVENT_TYPE,
-	SCRIBE_EVENT_DIVERGE_EVENT_SIZE,
-	SCRIBE_EVENT_DIVERGE_DATA_TYPE,
-	SCRIBE_EVENT_DIVERGE_DATA_PTR,
-	SCRIBE_EVENT_DIVERGE_DATA_CONTENT,
-	SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE,
-	SCRIBE_EVENT_DIVERGE_SYSCALL,
-	SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
-	SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
-	SCRIBE_EVENT_DIVERGE_MEM_OWNED,
-	SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED,
-	SCRIBE_EVENT_DIVERGE_REGS,
+#define __SCRIBE_EVENT(uname, lname, ...) uname,
+#define SCRIBE_START_COMMAND_DECL \
+	SCRIBE_EVENT_DUMMY2 = 127, /*
+				    * Start all device events at 128, it helps
+				    * for backward compatibility.
+				    */
+	#include <linux/scribe_events.h>
 };
 
 struct scribe_event {
@@ -114,324 +77,34 @@ struct scribe_event_diverge {
 	__u64 last_event_offset;
 } __attribute__((packed));
 
-/* Log file */
-#define struct_SCRIBE_EVENT_INIT struct scribe_event_init
-struct scribe_event_init {
-	struct scribe_event_sized h;
-	__u16 argc;
-	__u16 envc;
-	__u8 data[0];
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_PID struct scribe_event_pid
-struct scribe_event_pid {
-	struct scribe_event h;
-	__u32 pid;
-} __attribute__((packed));
-
-/* Some of those flags are also defined in scribe_uaccess.h */
-#define SCRIBE_DATA_INPUT		0x01
-#define SCRIBE_DATA_STRING		0x02
-#define SCRIBE_DATA_NON_DETERMINISTIC	0x04
-#define SCRIBE_DATA_INTERNAL		0x08
-#define SCRIBE_DATA_ZERO		0x10
-
-#define struct_SCRIBE_EVENT_DATA struct scribe_event_data
-struct scribe_event_data {
-	struct scribe_event_sized h;
-	__u32 user_ptr; /* FIXME 64 bit support ? */
-	__u8 data_type;
-	__u8 data[0];
-	__u32 ldata[0];
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_SYSCALL struct scribe_event_syscall
-struct scribe_event_syscall {
-	struct scribe_event h;
-	__u32 ret; /* FIXME 64 bit support ? */
-	__u16 nr;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_SYSCALL_END struct scribe_event_syscall_end
-struct scribe_event_syscall_end {
-	struct scribe_event h;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_QUEUE_EOF struct scribe_event_queue_eof
-struct scribe_event_queue_eof {
-	struct scribe_event h;
-} __attribute__((packed));
-
-
-/* Those flags are also defined in scribe_resource.h */
-#define SCRIBE_RES_TYPE_RESERVED	0
-#define SCRIBE_RES_TYPE_INODE		1
-#define SCRIBE_RES_TYPE_FILE		2
-#define SCRIBE_RES_TYPE_FILES_STRUCT	3
-#define SCRIBE_RES_TYPE_TASK		4
-#define SCRIBE_RES_TYPE_FUTEX		5
-#define SCRIBE_RES_TYPE_SPINLOCK	0x40
-#define SCRIBE_RES_TYPE_REGISTRATION	0x80
-
-#define struct_SCRIBE_EVENT_RESOURCE_LOCK struct scribe_event_resource_lock
-struct scribe_event_resource_lock {
-	struct scribe_event h;
-	__u8 type;
-	__u32 object;
-	__u32 serial;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_RESOURCE_UNLOCK struct scribe_event_resource_unlock
-struct scribe_event_resource_unlock {
-	struct scribe_event h;
-	__u32 object;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_RDTSC struct scribe_event_rdtsc
-struct scribe_event_rdtsc {
-	struct scribe_event h;
-	__u64 tsc;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_SIGNAL struct scribe_event_signal
-struct scribe_event_signal {
-	struct scribe_event_sized h;
-	__u8 nr;
-	__u8 deferred;
-	__u8 info[0];
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_FENCE struct scribe_event_fence
-struct scribe_event_fence {
-	struct scribe_event h;
-	__u32 serial;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_MEM_OWNED_READ struct scribe_event_mem_owned_read
-struct scribe_event_mem_owned_read {
-	struct scribe_event h;
-	__u32 address;
-	__u32 serial;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_MEM_OWNED_WRITE struct scribe_event_mem_owned_write
-struct scribe_event_mem_owned_write {
-	struct scribe_event h;
-	__u32 address;
-	__u32 serial;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_MEM_PUBLIC_READ struct scribe_event_mem_public_read
-struct scribe_event_mem_public_read {
-	struct scribe_event h;
-	__u32 address;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_MEM_PUBLIC_WRITE struct scribe_event_mem_public_write
-struct scribe_event_mem_public_write {
-	struct scribe_event h;
-	__u32 address;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_MEM_ALONE struct scribe_event_mem_alone
-struct scribe_event_mem_alone {
-	struct scribe_event h;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_REGS struct scribe_event_regs
-struct scribe_event_regs {
-	struct scribe_event h;
-	struct pt_regs regs;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_BOOKMARK struct scribe_event_bookmark
-struct scribe_event_bookmark {
-	struct scribe_event h;
-	__u32 id;
-	__u32 npr;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_SIG_SEND_COOKIE struct scribe_event_sig_send_cookie
-struct scribe_event_sig_send_cookie {
-	struct scribe_event h;
-	__u32 cookie;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_SIG_RECV_COOKIE struct scribe_event_sig_recv_cookie
-struct scribe_event_sig_recv_cookie {
-	struct scribe_event h;
-	__u32 cookie;
-} __attribute__((packed));
-
-/* Commands */
-
-#define struct_SCRIBE_EVENT_ATTACH_ON_EXECVE \
-	struct scribe_event_attach_on_execve
-struct scribe_event_attach_on_execve {
-	struct scribe_event h;
-	__u8 enable;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_RECORD struct scribe_event_record
-struct scribe_event_record {
-	struct scribe_event h;
-	__u32 log_fd;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_REPLAY struct scribe_event_replay
-struct scribe_event_replay {
-	struct scribe_event h;
-	__u32 log_fd;
-	__s32 backtrace_len;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_STOP struct scribe_event_stop
-struct scribe_event_stop {
-	struct scribe_event h;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_BOOKMARK_REQUEST \
-	struct scribe_event_bookmark_request
-struct scribe_event_bookmark_request {
-	struct scribe_event h;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK \
-	struct scribe_event_golive_on_next_bookmark
-struct scribe_event_golive_on_next_bookmark {
-	struct scribe_event h;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID \
-	struct scribe_event_golive_on_bookmark_id
-struct scribe_event_golive_on_bookmark_id {
-	struct scribe_event h;
-	__u32 id;
-} __attribute__((packed));
-
-/* Notifications */
-
-#define struct_SCRIBE_EVENT_BACKTRACE struct scribe_event_backtrace
-struct scribe_event_backtrace {
-	struct scribe_event h;
-	__u64 event_offset;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_CONTEXT_IDLE struct scribe_event_context_idle
-struct scribe_event_context_idle {
-	struct scribe_event h;
-	__s32 error;
-} __attribute__((packed));
-
-/* Diverge Notifications */
-
-#define struct_SCRIBE_EVENT_DIVERGE_EVENT_TYPE \
-	struct scribe_event_diverge_event_type
-struct scribe_event_diverge_event_type {
-	struct scribe_event_diverge h;
-	__u8 type;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_EVENT_SIZE \
-	struct scribe_event_diverge_event_size
-struct scribe_event_diverge_event_size {
-	struct scribe_event_diverge h;
-	__u16 size;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_DATA_TYPE \
-	struct scribe_event_diverge_data_type
-struct scribe_event_diverge_data_type {
-	struct scribe_event_diverge h;
-	__u8 type;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_DATA_PTR \
-	struct scribe_event_diverge_data_ptr
-struct scribe_event_diverge_data_ptr {
-	struct scribe_event_diverge h;
-	__u32 user_ptr;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_DATA_CONTENT \
-	struct scribe_event_diverge_data_content
-struct scribe_event_diverge_data_content {
-	struct scribe_event_diverge h;
-	__u16 offset;
-	__u8 size;
-	__u8 data[128];
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE \
-	struct scribe_event_diverge_resource_type
-struct scribe_event_diverge_resource_type {
-	struct scribe_event_diverge h;
-	__u8 type;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_SYSCALL \
-	struct scribe_event_diverge_syscall
-struct scribe_event_diverge_syscall {
-	struct scribe_event_diverge h;
-	__u16 nr;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_SYSCALL_RET \
-	struct scribe_event_diverge_syscall_ret
-struct scribe_event_diverge_syscall_ret {
-	struct scribe_event_diverge h;
-	__u32 ret;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_FENCE_SERIAL \
-	struct scribe_event_diverge_fence_serial
-struct scribe_event_diverge_fence_serial {
-	struct scribe_event_diverge h;
-	__u32 serial;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_MEM_OWNED \
-	struct scribe_event_diverge_mem_owned
-struct scribe_event_diverge_mem_owned {
-	struct scribe_event_diverge h;
-	__u32 address;
-	__u8 write_access;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED \
-	struct scribe_event_diverge_mem_not_owned
-struct scribe_event_diverge_mem_not_owned {
-	struct scribe_event_diverge h;
-} __attribute__((packed));
-
-#define struct_SCRIBE_EVENT_DIVERGE_REGS \
-	struct scribe_event_diverge_regs
-struct scribe_event_diverge_regs {
-	struct scribe_event_diverge h;
-	struct pt_regs regs;
-} __attribute__((packed));
+#define __SCRIBE_EVENT(uname, lname, ...)	\
+	struct lname {				\
+		__VA_ARGS__			\
+	} __attribute__((packed));
+#define __header_regular	struct scribe_event h;
+#define __header_sized		struct scribe_event_sized h;
+#define __header_diverge	struct scribe_event_diverge h;
+#define __field(type, name)	type name;
+#include <linux/scribe_events.h>
 
 static inline int is_diverge_type(int type)
 {
-	return  type == SCRIBE_EVENT_DIVERGE_EVENT_TYPE ||
-		type == SCRIBE_EVENT_DIVERGE_EVENT_SIZE ||
-		type == SCRIBE_EVENT_DIVERGE_DATA_TYPE ||
-		type == SCRIBE_EVENT_DIVERGE_DATA_PTR ||
-		type == SCRIBE_EVENT_DIVERGE_DATA_CONTENT ||
-		type == SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE ||
-		type == SCRIBE_EVENT_DIVERGE_SYSCALL ||
-		type == SCRIBE_EVENT_DIVERGE_SYSCALL_RET ||
-		type == SCRIBE_EVENT_DIVERGE_FENCE_SERIAL ||
-		type == SCRIBE_EVENT_DIVERGE_MEM_OWNED ||
-		type == SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED ||
-		type == SCRIBE_EVENT_DIVERGE_REGS;
+#define __SCRIBE_EVENT(...)
+#define __SCRIBE_EVENT_SIZED(...)
+#define __SCRIBE_EVENT_DIVERGE(uname, lname, ...) type == uname ||
+	return
+		#include <linux/scribe_events.h>
+		0;
 }
 
 static __always_inline int is_sized_type(int type)
 {
-	return  type == SCRIBE_EVENT_INIT ||
-		type == SCRIBE_EVENT_DATA ||
-		type == SCRIBE_EVENT_SIGNAL;
+#define __SCRIBE_EVENT(...)
+#define __SCRIBE_EVENT_SIZED(uname, lname, ...) type == uname ||
+#define __SCRIBE_EVENT_DIVERGE(...)
+	return
+		#include <linux/scribe_events.h>
+		0;
 }
 
 void you_are_using_an_unknown_scribe_type(void);
@@ -440,52 +113,9 @@ void you_are_using_an_unknown_scribe_type(void);
  */
 static __always_inline size_t sizeof_event_from_type(__u8 type)
 {
-#define __TYPE(t) if (type == t) return sizeof(struct_##t);
-	__TYPE(SCRIBE_EVENT_INIT);
-	__TYPE(SCRIBE_EVENT_PID);
-	__TYPE(SCRIBE_EVENT_DATA);
-	__TYPE(SCRIBE_EVENT_SYSCALL);
-	__TYPE(SCRIBE_EVENT_SYSCALL_END);
-	__TYPE(SCRIBE_EVENT_QUEUE_EOF);
-	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK);
-	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK);
-	__TYPE(SCRIBE_EVENT_RDTSC);
-	__TYPE(SCRIBE_EVENT_SIGNAL);
-	__TYPE(SCRIBE_EVENT_FENCE);
-	__TYPE(SCRIBE_EVENT_MEM_OWNED_READ);
-	__TYPE(SCRIBE_EVENT_MEM_OWNED_WRITE);
-	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_READ);
-	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE);
-	__TYPE(SCRIBE_EVENT_MEM_ALONE);
-	__TYPE(SCRIBE_EVENT_REGS);
-	__TYPE(SCRIBE_EVENT_BOOKMARK);
-	__TYPE(SCRIBE_EVENT_SIG_SEND_COOKIE);
-	__TYPE(SCRIBE_EVENT_SIG_RECV_COOKIE);
-
-	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE);
-	__TYPE(SCRIBE_EVENT_RECORD);
-	__TYPE(SCRIBE_EVENT_REPLAY);
-	__TYPE(SCRIBE_EVENT_STOP);
-	__TYPE(SCRIBE_EVENT_BOOKMARK_REQUEST);
-	__TYPE(SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK);
-	__TYPE(SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID);
-
-	__TYPE(SCRIBE_EVENT_BACKTRACE);
-	__TYPE(SCRIBE_EVENT_CONTEXT_IDLE);
-
-	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_TYPE);
-	__TYPE(SCRIBE_EVENT_DIVERGE_EVENT_SIZE);
-	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE);
-	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR);
-	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_CONTENT);
-	__TYPE(SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE);
-	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL);
-	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET);
-	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL);
-	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED);
-	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED);
-	__TYPE(SCRIBE_EVENT_DIVERGE_REGS);
-#undef  __TYPE
+#define __SCRIBE_EVENT(uname, lname, ...)	\
+	if (type == uname) return sizeof(struct lname);
+	#include <linux/scribe_events.h>
 
 	if (__builtin_constant_p(type))
 		you_are_using_an_unknown_scribe_type();
@@ -501,5 +131,92 @@ static inline size_t sizeof_event(struct scribe_event *event)
 	return sz;
 }
 
+
+
+/*
+ * FIXME Find a way to do that with the scribe_events.h file
+ */
+#define struct_SCRIBE_EVENT_INIT \
+	struct scribe_event_init
+#define struct_SCRIBE_EVENT_PID \
+	struct scribe_event_pid
+#define struct_SCRIBE_EVENT_DATA \
+	struct scribe_event_data
+#define struct_SCRIBE_EVENT_SYSCALL \
+	struct scribe_event_syscall
+#define struct_SCRIBE_EVENT_SYSCALL_END \
+	struct scribe_event_syscall_end
+#define struct_SCRIBE_EVENT_QUEUE_EOF \
+	struct scribe_event_queue_eof
+#define struct_SCRIBE_EVENT_RESOURCE_LOCK \
+	struct scribe_event_resource_lock
+#define struct_SCRIBE_EVENT_RESOURCE_UNLOCK \
+	struct scribe_event_resource_unlock
+#define struct_SCRIBE_EVENT_RDTSC \
+	struct scribe_event_rdtsc
+#define struct_SCRIBE_EVENT_SIGNAL \
+	struct scribe_event_signal
+#define struct_SCRIBE_EVENT_FENCE \
+	struct scribe_event_fence
+#define struct_SCRIBE_EVENT_MEM_OWNED_READ \
+	struct scribe_event_mem_owned_read
+#define struct_SCRIBE_EVENT_MEM_OWNED_WRITE \
+	struct scribe_event_mem_owned_write
+#define struct_SCRIBE_EVENT_MEM_PUBLIC_READ \
+	struct scribe_event_mem_public_read
+#define struct_SCRIBE_EVENT_MEM_PUBLIC_WRITE \
+	struct scribe_event_mem_public_write
+#define struct_SCRIBE_EVENT_MEM_ALONE \
+	struct scribe_event_mem_alone
+#define struct_SCRIBE_EVENT_REGS \
+	struct scribe_event_regs
+#define struct_SCRIBE_EVENT_BOOKMARK \
+	struct scribe_event_bookmark
+#define struct_SCRIBE_EVENT_SIG_SEND_COOKIE \
+	struct scribe_event_sig_send_cookie
+#define struct_SCRIBE_EVENT_SIG_RECV_COOKIE \
+	struct scribe_event_sig_recv_cookie
+#define struct_SCRIBE_EVENT_ATTACH_ON_EXECVE \
+	struct scribe_event_attach_on_execve
+#define struct_SCRIBE_EVENT_RECORD \
+	struct scribe_event_record
+#define struct_SCRIBE_EVENT_REPLAY \
+	struct scribe_event_replay
+#define struct_SCRIBE_EVENT_STOP \
+	struct scribe_event_stop
+#define struct_SCRIBE_EVENT_BOOKMARK_REQUEST \
+	struct scribe_event_bookmark_request
+#define struct_SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK \
+	struct scribe_event_golive_on_next_bookmark
+#define struct_SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID \
+	struct scribe_event_golive_on_bookmark_id
+#define struct_SCRIBE_EVENT_BACKTRACE \
+	struct scribe_event_backtrace
+#define struct_SCRIBE_EVENT_CONTEXT_IDLE \
+	struct scribe_event_context_idle
+#define struct_SCRIBE_EVENT_DIVERGE_EVENT_TYPE \
+	struct scribe_event_diverge_event_type
+#define struct_SCRIBE_EVENT_DIVERGE_EVENT_SIZE \
+	struct scribe_event_diverge_event_size
+#define struct_SCRIBE_EVENT_DIVERGE_DATA_TYPE \
+	struct scribe_event_diverge_data_type
+#define struct_SCRIBE_EVENT_DIVERGE_DATA_PTR \
+	struct scribe_event_diverge_data_ptr
+#define struct_SCRIBE_EVENT_DIVERGE_DATA_CONTENT \
+	struct scribe_event_diverge_data_content
+#define struct_SCRIBE_EVENT_DIVERGE_RESOURCE_TYPE \
+	struct scribe_event_diverge_resource_type
+#define struct_SCRIBE_EVENT_DIVERGE_SYSCALL \
+	struct scribe_event_diverge_syscall
+#define struct_SCRIBE_EVENT_DIVERGE_SYSCALL_RET \
+	struct scribe_event_diverge_syscall_ret
+#define struct_SCRIBE_EVENT_DIVERGE_FENCE_SERIAL \
+	struct scribe_event_diverge_fence_serial
+#define struct_SCRIBE_EVENT_DIVERGE_MEM_OWNED \
+	struct scribe_event_diverge_mem_owned
+#define struct_SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED \
+	struct scribe_event_diverge_mem_not_owned
+#define struct_SCRIBE_EVENT_DIVERGE_REGS \
+	struct scribe_event_diverge_regs
 
 #endif /* _LINUX_SCRIBE_API_H_ */
