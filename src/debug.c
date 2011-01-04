@@ -385,7 +385,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       get_strv_str(buffer1, 100, (char *)e->data, 0, e->argc),
 	       get_strv_str(buffer2, 50, (char *)e->data, e->argc, e->envc));
 	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);
-	__TYPE(SCRIBE_EVENT_DATA, "data: %s, ptr = %p, size = %u, %s",
+	__TYPE(SCRIBE_EVENT_DATA, "data: size = %u, %s",
+	       e->h.size, escape_str(buffer1, 100, e->data, e->h.size));
+	__TYPE(SCRIBE_EVENT_DATA_EXTRA, "data: %s, ptr = %p, size = %u, %s",
 	       get_data_type_str(e->data_type),
 	       (void *)e->user_ptr, e->h.size,
 	       escape_str(buffer1, 100, e->data, e->h.size));
@@ -395,6 +397,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK,
+	       "resource lock, serial = %u", e->serial);
+	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK_EXTRA,
 	       "resource lock, type = %s, object = %p, serial = %u",
 	       get_res_type_str(buffer1, sizeof(buffer1), e->type),
 	       (void *)e->object, e->serial);

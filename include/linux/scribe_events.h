@@ -82,6 +82,7 @@
 SCRIBE_START_LOG_FILE_DECL
 
 SCRIBE_EVENT_SIZED(INIT, init,
+	__field(__u32, flags)
 	__field(__u16, argc)
 	__field(__u16, envc)
 	__field(__u8, data[0])
@@ -91,14 +92,12 @@ SCRIBE_EVENT(PID, pid,
 	__field(__u32, pid)
 )
 
-/* Some of those flags are also defined in scribe_uaccess.h */
-#define SCRIBE_DATA_INPUT		0x01
-#define SCRIBE_DATA_STRING		0x02
-#define SCRIBE_DATA_NON_DETERMINISTIC	0x04
-#define SCRIBE_DATA_INTERNAL		0x08
-#define SCRIBE_DATA_ZERO		0x10
-
 SCRIBE_EVENT_SIZED(DATA, data,
+	__field(__u8, data[0])
+	__field(__u32, ldata[0])
+)
+
+SCRIBE_EVENT_SIZED(DATA_EXTRA, data_extra,
 	__field(__u32, user_ptr) /* FIXME 64 bit support ? */
 	__field(__u8, data_type)
 	__field(__u8, data[0])
@@ -114,17 +113,11 @@ SCRIBE_EVENT(SYSCALL_END, syscall_end)
 
 SCRIBE_EVENT(QUEUE_EOF, queue_eof)
 
-/* Those flags are also defined in scribe_resource.h */
-#define SCRIBE_RES_TYPE_RESERVED	0
-#define SCRIBE_RES_TYPE_INODE		1
-#define SCRIBE_RES_TYPE_FILE		2
-#define SCRIBE_RES_TYPE_FILES_STRUCT	3
-#define SCRIBE_RES_TYPE_TASK		4
-#define SCRIBE_RES_TYPE_FUTEX		5
-#define SCRIBE_RES_TYPE_SPINLOCK	0x40
-#define SCRIBE_RES_TYPE_REGISTRATION	0x80
-
 SCRIBE_EVENT(RESOURCE_LOCK, resource_lock,
+	__field(__u32, serial)
+)
+
+SCRIBE_EVENT(RESOURCE_LOCK_EXTRA, resource_lock_extra,
 	__field(__u8, type)
 	__field(__u32, object)
 	__field(__u32, serial)
@@ -193,10 +186,12 @@ SCRIBE_EVENT(ATTACH_ON_EXECVE, attach_on_execve,
 )
 
 SCRIBE_EVENT(RECORD, record,
+	__field(__u32, flags)
 	__field(__u32, log_fd)
 )
 
 SCRIBE_EVENT(REPLAY, replay,
+	__field(__u32, flags)
 	__field(__u32, log_fd)
 	__field(__s32, backtrace_len)
 )
