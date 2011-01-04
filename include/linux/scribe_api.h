@@ -197,6 +197,7 @@ struct scribe_event_rdtsc {
 struct scribe_event_signal {
 	struct scribe_event_sized h;
 	__u8 nr;
+	__u8 deferred;
 	__u8 info[0];
 } __attribute__((packed));
 

@@ -444,8 +444,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK,
 	       "resource unlock, object = %p", (void *)e->object);
 	__TYPE(SCRIBE_EVENT_RDTSC, "rdtsc = %016llx", e->tsc);
-	__TYPE(SCRIBE_EVENT_SIGNAL, "signal: %s, info = %s",
+	__TYPE(SCRIBE_EVENT_SIGNAL, "signal: %s, deferred = %s, info = %s",
 	       get_signal_str(buffer1, e->nr),
+	       e->deferred ? "true" : "false",
 	       escape_str(buffer2, 100, e->info, e->h.size));
 	__TYPE(SCRIBE_EVENT_FENCE, "--fence(%u)--", e->serial);
 	__TYPE(SCRIBE_EVENT_MEM_OWNED_READ,
