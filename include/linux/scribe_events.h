@@ -31,9 +31,8 @@
 #endif
 
 #ifndef SCRIBE_EVENT
-#define SCRIBE_EVENT(uname, lname, ...)		\
-	__SCRIBE_EVENT(SCRIBE_EVENT_##uname,	\
-		       scribe_event_##lname,	\
+#define SCRIBE_EVENT(name, ...)				\
+	__SCRIBE_EVENT(scribe_event_##name,		\
 		       __header_regular __VA_ARGS__)
 #endif
 
@@ -42,9 +41,8 @@
 #endif
 
 #ifndef SCRIBE_EVENT_SIZED
-#define SCRIBE_EVENT_SIZED(uname, lname, ...)		\
-	__SCRIBE_EVENT_SIZED(SCRIBE_EVENT_##uname,	\
-			     scribe_event_##lname,	\
+#define SCRIBE_EVENT_SIZED(name, ...)			\
+	__SCRIBE_EVENT_SIZED(scribe_event_##name,	\
 			     __header_sized __VA_ARGS__)
 #endif
 
@@ -52,11 +50,9 @@
 #define __SCRIBE_EVENT_DIVERGE __SCRIBE_EVENT
 #endif
 
-
 #ifndef SCRIBE_EVENT_DIVERGE
-#define SCRIBE_EVENT_DIVERGE(uname, lname, ...)			\
-	__SCRIBE_EVENT_DIVERGE(SCRIBE_EVENT_DIVERGE_##uname,	\
-			       scribe_event_diverge_##lname,	\
+#define SCRIBE_EVENT_DIVERGE(name, ...)				\
+	__SCRIBE_EVENT_DIVERGE(scribe_event_diverge_##name,	\
 			       __header_diverge __VA_ARGS__)
 #endif
 
@@ -81,191 +77,191 @@
 /* Log file events */
 SCRIBE_START_LOG_FILE_DECL
 
-SCRIBE_EVENT_SIZED(INIT, init,
+SCRIBE_EVENT_SIZED(init,
 	__field(__u32, flags)
 	__field(__u16, argc)
 	__field(__u16, envc)
 	__field(__u8, data[0])
 )
 
-SCRIBE_EVENT(PID, pid,
+SCRIBE_EVENT(pid,
 	__field(__u32, pid)
 )
 
-SCRIBE_EVENT_SIZED(DATA, data,
+SCRIBE_EVENT_SIZED(data,
 	__field(__u8, data[0])
 	__field(__u32, ldata[0])
 )
 
-SCRIBE_EVENT_SIZED(DATA_EXTRA, data_extra,
+SCRIBE_EVENT_SIZED(data_extra,
 	__field(__u32, user_ptr) /* FIXME 64 bit support ? */
 	__field(__u8, data_type)
 	__field(__u8, data[0])
 	__field(__u32, ldata[0])
 )
 
-SCRIBE_EVENT(SYSCALL, syscall,
+SCRIBE_EVENT(syscall,
 	__field(__u32, ret) /* FIXME 64 bit support ? */
 	__field(__u16, nr)
 )
 
-SCRIBE_EVENT(SYSCALL_END, syscall_end)
+SCRIBE_EVENT(syscall_end)
 
-SCRIBE_EVENT(QUEUE_EOF, queue_eof)
+SCRIBE_EVENT(queue_eof)
 
-SCRIBE_EVENT(RESOURCE_LOCK, resource_lock,
+SCRIBE_EVENT(resource_lock,
 	__field(__u32, serial)
 )
 
-SCRIBE_EVENT(RESOURCE_LOCK_EXTRA, resource_lock_extra,
+SCRIBE_EVENT(resource_lock_extra,
 	__field(__u8, type)
 	__field(__u32, object)
 	__field(__u32, serial)
 )
 
-SCRIBE_EVENT(RESOURCE_UNLOCK, resource_unlock,
+SCRIBE_EVENT(resource_unlock,
 	__field(__u32, object)
 )
 
-SCRIBE_EVENT(RDTSC, rdtsc,
+SCRIBE_EVENT(rdtsc,
 	__field(__u64, tsc)
 )
 
-SCRIBE_EVENT_SIZED(SIGNAL, signal,
+SCRIBE_EVENT_SIZED(signal,
 	__field(__u8, nr)
 	__field(__u8, deferred)
 	__field(__u8, info[0])
 )
 
-SCRIBE_EVENT(FENCE, fence,
+SCRIBE_EVENT(fence,
 	__field(__u32, serial)
 )
 
-SCRIBE_EVENT(MEM_OWNED_READ, mem_owned_read,
-	__field(__u32, address)
-	__field(__u32, serial)
-)
-
-SCRIBE_EVENT(MEM_OWNED_WRITE, mem_owned_write,
+SCRIBE_EVENT(mem_owned_read,
 	__field(__u32, address)
 	__field(__u32, serial)
 )
 
-SCRIBE_EVENT(MEM_PUBLIC_READ, mem_public_read,
+SCRIBE_EVENT(mem_owned_write,
+	__field(__u32, address)
+	__field(__u32, serial)
+)
+
+SCRIBE_EVENT(mem_public_read,
 	__field(__u32, address)
 )
 
-SCRIBE_EVENT(MEM_PUBLIC_WRITE, mem_public_write,
+SCRIBE_EVENT(mem_public_write,
 	__field(__u32, address)
 )
 
-SCRIBE_EVENT(MEM_ALONE, mem_alone)
+SCRIBE_EVENT(mem_alone)
 
-SCRIBE_EVENT(REGS, regs,
+SCRIBE_EVENT(regs,
 	__field(struct pt_regs, regs)
 )
 
-SCRIBE_EVENT(BOOKMARK, bookmark,
+SCRIBE_EVENT(bookmark,
 	__field(__u32, id)
 	__field(__u32, npr)
 )
 
-SCRIBE_EVENT(SIG_SEND_COOKIE, sig_send_cookie,
+SCRIBE_EVENT(sig_send_cookie,
 	__field(__u32, cookie)
 )
 
-SCRIBE_EVENT(SIG_RECV_COOKIE, sig_recv_cookie,
+SCRIBE_EVENT(sig_recv_cookie,
 	__field(__u32, cookie)
 )
 
 /* Command events */
 SCRIBE_START_COMMAND_DECL
 
-SCRIBE_EVENT(ATTACH_ON_EXECVE, attach_on_execve,
+SCRIBE_EVENT(attach_on_execve,
 	__field(__u8, enable)
 )
 
-SCRIBE_EVENT(RECORD, record,
+SCRIBE_EVENT(record,
 	__field(__u32, flags)
 	__field(__u32, log_fd)
 )
 
-SCRIBE_EVENT(REPLAY, replay,
+SCRIBE_EVENT(replay,
 	__field(__u32, flags)
 	__field(__u32, log_fd)
 	__field(__s32, backtrace_len)
 )
 
-SCRIBE_EVENT(STOP, stop)
+SCRIBE_EVENT(stop)
 
-SCRIBE_EVENT(BOOKMARK_REQUEST, bookmark_request)
+SCRIBE_EVENT(bookmark_request)
 
-SCRIBE_EVENT(GOLIVE_ON_NEXT_BOOKMARK, golive_on_next_bookmark)
+SCRIBE_EVENT(golive_on_next_bookmark)
 
-SCRIBE_EVENT(GOLIVE_ON_BOOKMARK_ID, golive_on_bookmark_id,
+SCRIBE_EVENT(golive_on_bookmark_id,
 	__field(__u32, id)
 )
 
 /* Notification events */
 SCRIBE_START_NOTIFICATION_DECL
 
-SCRIBE_EVENT(BACKTRACE, backtrace,
+SCRIBE_EVENT(backtrace,
 	__field(__u64, event_offset)
 )
 
-SCRIBE_EVENT(CONTEXT_IDLE, context_idle,
+SCRIBE_EVENT(context_idle,
 	__field(__s32, error)
 )
 
 /* Diverge Notification events */
 SCRIBE_START_DIVERGE_NOTIFICATION_DECL
 
-SCRIBE_EVENT_DIVERGE(EVENT_TYPE, event_type,
+SCRIBE_EVENT_DIVERGE(event_type,
 	__field(__u8, type)
 )
 
-SCRIBE_EVENT_DIVERGE(EVENT_SIZE, event_size,
+SCRIBE_EVENT_DIVERGE(event_size,
 	__field(__u16, size)
 )
 
-SCRIBE_EVENT_DIVERGE(DATA_TYPE, data_type,
+SCRIBE_EVENT_DIVERGE(data_type,
 	__field(__u8, type)
 )
 
-SCRIBE_EVENT_DIVERGE(DATA_PTR, data_ptr,
+SCRIBE_EVENT_DIVERGE(data_ptr,
 	__field(__u32, user_ptr)
 )
 
-SCRIBE_EVENT_DIVERGE(DATA_CONTENT, data_content,
+SCRIBE_EVENT_DIVERGE(data_content,
 	__field(__u16, offset)
 	__field(__u8, size)
 	__field(__u8, data[128])
 )
 
-SCRIBE_EVENT_DIVERGE(RESOURCE_TYPE, resource_type,
+SCRIBE_EVENT_DIVERGE(resource_type,
 	__field(__u8, type)
 )
 
-SCRIBE_EVENT_DIVERGE(SYSCALL, syscall,
+SCRIBE_EVENT_DIVERGE(syscall,
 	__field(__u16, nr)
 )
 
-SCRIBE_EVENT_DIVERGE(SYSCALL_RET, syscall_ret,
+SCRIBE_EVENT_DIVERGE(syscall_ret,
 	__field(__u32, ret)
 )
 
-SCRIBE_EVENT_DIVERGE(FENCE_SERIAL, fence_serial,
+SCRIBE_EVENT_DIVERGE(fence_serial,
 	__field(__u32, serial)
 )
 
-SCRIBE_EVENT_DIVERGE(MEM_OWNED, mem_owned,
+SCRIBE_EVENT_DIVERGE(mem_owned,
 	__field(__u32, address)
 	__field(__u8, write_access)
 )
 
-SCRIBE_EVENT_DIVERGE(MEM_NOT_OWNED, mem_not_owned)
+SCRIBE_EVENT_DIVERGE(mem_not_owned)
 
-SCRIBE_EVENT_DIVERGE(REGS, regs,
+SCRIBE_EVENT_DIVERGE(regs,
 	__field(struct pt_regs, regs)
 )
 

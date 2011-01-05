@@ -192,8 +192,8 @@ static char *get_signal_str(char *buffer, int signr)
 
 static char *get_type_str(char *buffer, int type)
 {
-#define __SCRIBE_EVENT(uname, lname, ...)	\
-	if (type == uname) return #uname;
+#define __SCRIBE_EVENT(name, ...)	\
+	if (type == upper##name) return #name;
 	#include <linux/scribe_events.h>
 
 	sprintf(buffer, "unkown type: %d", type);
@@ -372,8 +372,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	char buffer1[4096];
 	char buffer2[4096];
 
-#define DECL_EVENT(t) struct_##t *e __attribute__((__unused__)) = \
-	(struct_##t *)event
+#define DECL_EVENT(t) struct##t *e __attribute__((__unused__)) = \
+	(struct##t *)event
 
 #define __TYPE(t, fmt, ...)					\
 	if (event->type == t) {					\
