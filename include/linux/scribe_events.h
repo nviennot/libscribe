@@ -142,11 +142,19 @@ SCRIBE_EVENT(fence,
 )
 
 SCRIBE_EVENT(mem_owned_read,
-	__field(__u32, address)
 	__field(__u32, serial)
 )
 
 SCRIBE_EVENT(mem_owned_write,
+	__field(__u32, serial)
+)
+
+SCRIBE_EVENT(mem_owned_read_extra,
+	__field(__u32, address)
+	__field(__u32, serial)
+)
+
+SCRIBE_EVENT(mem_owned_write_extra,
 	__field(__u32, address)
 	__field(__u32, serial)
 )
