@@ -393,7 +393,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       get_data_type_str(e->data_type),
 	       (void *)e->user_ptr, e->h.size,
 	       escape_str(buffer1, 100, e->data, e->h.size));
-	__TYPE(SCRIBE_EVENT_SYSCALL, "%s() = %s",
+	__TYPE(SCRIBE_EVENT_SYSCALL, "syscall() = %s",
+	       get_ret_str(buffer2, e->ret));
+	__TYPE(SCRIBE_EVENT_SYSCALL_EXTRA, "%s() = %s",
 	       get_syscall_str(buffer1, e->nr),
 	       get_ret_str(buffer2, e->ret));
 	__TYPE(SCRIBE_EVENT_SYSCALL_END, "syscall ended");

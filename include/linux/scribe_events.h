@@ -101,6 +101,10 @@ SCRIBE_EVENT_SIZED(data_extra,
 )
 
 SCRIBE_EVENT(syscall,
+	__field(__u32, ret)
+)
+
+SCRIBE_EVENT(syscall_extra,
 	__field(__u32, ret) /* FIXME 64 bit support ? */
 	__field(__u16, nr)
 )
