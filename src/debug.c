@@ -337,6 +337,7 @@ static const char *get_res_raw_type_str(int type)
 		case SCRIBE_RES_TYPE_FILES_STRUCT: return "files_struct";
 		case SCRIBE_RES_TYPE_TASK: return "task";
 		case SCRIBE_RES_TYPE_FUTEX: return "futex";
+		case SCRIBE_RES_TYPE_IPC: return "ipc";
 		default: return "unkown type";
 	}
 }
