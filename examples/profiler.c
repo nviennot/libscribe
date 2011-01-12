@@ -35,7 +35,7 @@ int dump_events(const char *buf, size_t len)
 			scribe_get_event_str(buffer, sizeof(buffer), event);
 			printf("[%02d] %s%s\n", pid, in_syscall ? "    " : "", buffer);
 
-			if (event->type == SCRIBE_EVENT_SYSCALL)
+			if (event->type == SCRIBE_EVENT_SYSCALL_EXTRA)
 				in_syscall = 1;
 		}
 	}
