@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 KERNEL_DIR=$1
 
 for f in include/linux/scribe_{events,defines,api}.h; do
