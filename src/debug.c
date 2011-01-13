@@ -432,6 +432,12 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_MEM_ALONE, "mem alone");
 	__TYPE(SCRIBE_EVENT_REGS, "regs: %s",
 	       get_regs_str(buffer1, sizeof(buffer1), &e->regs));
+	__TYPE(SCRIBE_EVENT_BOOKMARK,
+	       "bookmark, id = %u, npr = %u", e->id, e->npr);
+	__TYPE(SCRIBE_EVENT_SIG_SEND_COOKIE,
+	       "signal send, cookie = %u", e->cookie);
+	__TYPE(SCRIBE_EVENT_SIG_RECV_COOKIE,
+	       "signal recv, cookie = %u", e->cookie);
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
@@ -482,12 +488,6 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "memory address, page not owned");
 	__TYPE(SCRIBE_EVENT_DIVERGE_REGS, "regs: %s",
 	       get_regs_str(buffer1, sizeof(buffer1), &e->regs));
-	__TYPE(SCRIBE_EVENT_BOOKMARK,
-	       "bookmark, id = %u, npr = %u", e->id, e->npr);
-	__TYPE(SCRIBE_EVENT_SIG_SEND_COOKIE,
-	       "signal send, cookie = %u", e->cookie);
-	__TYPE(SCRIBE_EVENT_SIG_RECV_COOKIE,
-	       "signal recv, cookie = %u", e->cookie);
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
