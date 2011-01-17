@@ -32,6 +32,7 @@
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <sys/mount.h>
+#include <linux/fs.h>
 #include <signal.h>
 #include <limits.h>
 #include <scribe.h>
@@ -160,6 +161,33 @@ static void default_init_loader(char *const *argv, char *const *envp)
 	execvp(argv[0], argv);
 }
 
+
+static int mount_new_proc(void)
+{
+	if (umount2("/proc", MNT_DETACH) < 0)
+		return -1;
+	if (mount("proc", "/proc", "proc", 0, NULL))
+		return -1;
+	return 0;
+}
+
+static int mount_new_devpts(void)
+{
+	/*
+	 * TODO Instead of hardcoding the group and the mode, use the original
+	 * ones.
+	 */
+	if (umount2("/dev/pts", MNT_DETACH) < 0)
+		return -1;
+	if (mount("devpts", "/dev/pts", "devpts",
+		  MS_NOEXEC | MS_NOSUID | MS_RELATIME,
+		  "newinstance,gid=5,mode=0620,ptmxmode=0666"))
+		return -1;
+	if (mount("/dev/pts/ptmx", "/dev/ptmx", NULL, MS_BIND, NULL))
+		return -1;
+	return 0;
+}
+
 /* The init process launcher */
 struct child_args {
 	scribe_context_t ctx;
@@ -171,9 +199,11 @@ static int init_process(void *_fn_args)
 	struct child_args *fn_args = _fn_args;
 	scribe_context_t ctx = fn_args->ctx;
 
-	/* mount a fresh new /proc */
-	umount2("/proc", MNT_DETACH);
-	mount("proc", "/proc", "proc", 0, NULL);
+	if (mount_new_proc() < 0)
+		goto bad;
+
+	if (mount_new_devpts() < 0)
+		goto bad;
 
 	if (scribe_attach_on_execve(ctx, 1))
 		goto bad;
@@ -191,7 +221,8 @@ static int init_process(void *_fn_args)
 		default_init_loader(fn_args->argv, fn_args->envp);
 
 bad:
-	printf("Init failed. You probably want to ctrl+c\n");
+	/* TODO propagate the error through a pipe to the parent */
+	perror("Init failed. You probably want to ctrl+c\n");
 	return 1;
 }
 
