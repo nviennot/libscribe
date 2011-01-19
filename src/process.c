@@ -37,12 +37,18 @@ int set_scribe_flags(int flags)
 
 int scribe_is_recording(void)
 {
-	return get_scribe_flags() & SCRIBE_PS_RECORD;
+	int flags = get_scribe_flags();
+	if (flags == -1)
+		return 0;
+	return flags & SCRIBE_PS_RECORD;
 }
 
 int scribe_is_replaying(void)
 {
-	return get_scribe_flags() & SCRIBE_PS_REPLAY;
+	int flags = get_scribe_flags();
+	if (flags == -1)
+		return 0;
+	return flags & SCRIBE_PS_REPLAY;
 }
 
 int scribe_disable(void)
