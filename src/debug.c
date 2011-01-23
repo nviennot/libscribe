@@ -361,11 +361,11 @@ static char *get_regs_str(char *buf, size_t buf_size, struct pt_regs *regs)
 		 "eip: %04x:%08lx, eflags: %08lx, "
 		 "eax: %08lx, ebx: %08lx, ecx: %08lx, edx: %08lx "
 		 "esi: %08lx, edi: %08lx, ebp: %08lx, esp: %08lx "
-		 "ds: %04x, es: %04x, fs: %04x, ss: %04x",
+		 "ds: %04x, es: %04x, fs: %04x, gs: %04x, ss: %04x",
 		 regs->xcs, regs->eip, regs->eflags,
 		 regs->eax, regs->ebx, regs->ecx, regs->edx,
 		 regs->esi, regs->edi, regs->ebp, regs->esp,
-		 (__u16)regs->xds, (__u16)regs->xes, (__u16)regs->xfs, (__u16)regs->xss);
+		 regs->xds, regs->xes, regs->xfs, regs->xgs, regs->xss);
 	return buf;
 }
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
