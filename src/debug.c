@@ -345,12 +345,10 @@ static const char *get_res_raw_type_str(int type)
 
 static char *get_res_type_str(char *buf, size_t buf_size, int type)
 {
-	int is_reg, is_spinlock;
-	is_reg = type & SCRIBE_RES_TYPE_REGISTRATION;
-	is_spinlock = type & SCRIBE_RES_TYPE_SPINLOCK;
-	type &= ~(SCRIBE_RES_TYPE_REGISTRATION | SCRIBE_RES_TYPE_SPINLOCK);
-	snprintf(buf, buf_size, "%s%s%s",
-		 is_reg ? "registration for " : "",
+	int is_spinlock;
+	is_spinlock = type & SCRIBE_RES_SPINLOCK;
+	type &= SCRIBE_RES_TYPE_MASK;
+	snprintf(buf, buf_size, "%s%s",
 		 get_res_raw_type_str(type),
 		 is_spinlock ? " (spinlock)" : "");
 	return buf;

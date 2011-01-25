@@ -83,16 +83,15 @@
  * These flags are used as a resource type
  * They are also defined in scribe_resource.h
  */
-#define SCRIBE_RES_TYPE_RESERVED	0
-#define SCRIBE_RES_TYPE_INODE		1
-#define SCRIBE_RES_TYPE_FILE		2
-#define SCRIBE_RES_TYPE_FILES_STRUCT	3
-#define SCRIBE_RES_TYPE_TASK		4
-#define SCRIBE_RES_TYPE_FUTEX		5
-#define SCRIBE_RES_TYPE_IPC		6
-#define SCRIBE_RES_TYPE_FS		7
-#define SCRIBE_RES_TYPE_SPINLOCK	0x40
-#define SCRIBE_RES_TYPE_REGISTRATION	0x80
+#define SCRIBE_RES_TYPE_INODE		0
+#define SCRIBE_RES_TYPE_FILE		1
+#define SCRIBE_RES_TYPE_FILES_STRUCT	2
+#define SCRIBE_RES_TYPE_TASK		3
+#define SCRIBE_RES_TYPE_FUTEX		4
+#define SCRIBE_RES_TYPE_IPC		5
+#define SCRIBE_RES_TYPE_FS		6
+#define SCRIBE_RES_TYPE_MASK		0x0f
+#define SCRIBE_RES_SPINLOCK		0x80
 
 
 enum scribe_event_type {
