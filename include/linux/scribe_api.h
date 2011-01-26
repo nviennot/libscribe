@@ -54,6 +54,10 @@
 #define SCRIBE_REGS			0x00020000
 #define SCRIBE_ALL			0x00ffff00
 #define SCRIBE_DEFAULT			(SCRIBE_SYSCALL_EXTRA)
+
+#define SCRIBE_DISABLE_MM		0x01000000
+#define SCRIBE_FLAGS_MASK		0xffffff00
+
 /*
  * These flags are used for the scribe syscalls such as sys_set_scribe_flags().
  */
