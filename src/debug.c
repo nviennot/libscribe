@@ -29,8 +29,8 @@
 
 #define GET_STR(table, n) ({ 				\
 	char *str;					\
-	if (n < sizeof(table##_str)/sizeof(char*))	\
-		str = table##_str[n];			\
+	if ((unsigned int)n < sizeof(table##_str)/sizeof(char*))	\
+		str = table##_str[(unsigned int)n];			\
 	else str = NULL;				\
 	str; })
 
@@ -105,11 +105,22 @@ static char *syscall_str[] = {
 	"eclone"
 };
 
+static char *syscall_socketcall_str[] = {
+	"socket", "bind", "connect", "listen", "accept", "getsockname",
+	"getpeername", "socketpair", "send", "recv", "sendto", "recvfrom",
+	"shutdown", "setsockopt", "getsockopt", "sendmsg", "recvmsg",
+	"accept4", "recvmmsg"
+};
+
 static char *get_syscall_str(char *buffer, unsigned int n)
 {
-	char *str = GET_STR(syscall, n);
-	if (str)
+	char *str;
+
+	if ((str = GET_STR(syscall, n)))
 		return str;
+	if ((str = GET_STR(syscall_socketcall, n - SCRIBE_SOCKETCALL_BASE - 1)))
+		return str;
+
 	sprintf(buffer, "syscall_%d", n);
 	return buffer;
 }

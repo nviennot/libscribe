@@ -96,6 +96,11 @@
 #define SCRIBE_RES_TYPE_MASK		0x0f
 #define SCRIBE_RES_SPINLOCK		0x80
 
+/*
+ * Syscalls offsets for multiplexed calls
+ */
+#define SCRIBE_SOCKETCALL_BASE		0xf000
+
 
 enum scribe_event_type {
 	SCRIBE_EVENT_DUMMY1 = 0, /* skip the type 0 for safety */
