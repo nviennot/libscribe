@@ -400,7 +400,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       get_strv_str(buffer1, 100, (char *)e->data, 0, e->argc),
 	       get_strv_str(buffer2, 50, (char *)e->data, e->argc, e->envc));
 	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);
-	__TYPE(SCRIBE_EVENT_DATA_INFO, "data info, ptr = %p, size = %u",
+	__TYPE(SCRIBE_EVENT_DATA_INFO, "data info: %s, ptr = %p, size = %u",
+	       get_data_type_str(buffer1, e->data_type),
 	       (void *)e->user_ptr, e->size);
 	__TYPE(SCRIBE_EVENT_DATA, "data: size = %u, %s",
 	       e->h.size, escape_str(buffer1, 100, e->data, e->h.size));

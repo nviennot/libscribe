@@ -91,6 +91,7 @@ SCRIBE_EVENT(pid,
 SCRIBE_EVENT(data_info,
 	__field(__u32, user_ptr)
 	__field(__u16, size)
+	__field(__u8, data_type)
 )
 
 SCRIBE_EVENT_SIZED(data,
