@@ -279,11 +279,11 @@ static char *escape_str(char *buf, ssize_t buf_size,
 
 static char *get_data_type_str(char *buf, int type)
 {
+	type &= ~SCRIBE_DATA_NEED_INFO;
 	switch(type) {
 		case 0: return "output";
 		case SCRIBE_DATA_INPUT: return "input";
 		case SCRIBE_DATA_INPUT | SCRIBE_DATA_STRING: return "input string";
-		case SCRIBE_DATA_NON_DETERMINISTIC | SCRIBE_DATA_NEED_INFO:
 		case SCRIBE_DATA_NON_DETERMINISTIC: return "non-det output";
 		case SCRIBE_DATA_INTERNAL: return "internal";
 		case SCRIBE_DATA_ZERO | SCRIBE_DATA_NON_DETERMINISTIC:
