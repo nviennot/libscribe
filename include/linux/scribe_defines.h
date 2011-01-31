@@ -5,6 +5,8 @@
 #define structSCRIBE_EVENT_INIT struct scribe_event_init
 #define upperscribe_event_pid SCRIBE_EVENT_PID
 #define structSCRIBE_EVENT_PID struct scribe_event_pid
+#define upperscribe_event_data_info SCRIBE_EVENT_DATA_INFO
+#define structSCRIBE_EVENT_DATA_INFO struct scribe_event_data_info
 #define upperscribe_event_data SCRIBE_EVENT_DATA
 #define structSCRIBE_EVENT_DATA struct scribe_event_data
 #define upperscribe_event_data_extra SCRIBE_EVENT_DATA_EXTRA

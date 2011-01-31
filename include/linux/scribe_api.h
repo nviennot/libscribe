@@ -82,6 +82,7 @@
 #define SCRIBE_DATA_NON_DETERMINISTIC	0x04
 #define SCRIBE_DATA_INTERNAL		0x08
 #define SCRIBE_DATA_ZERO		0x10
+#define SCRIBE_DATA_NEED_INFO		0x20
 
 /*
  * These flags are used as a resource type

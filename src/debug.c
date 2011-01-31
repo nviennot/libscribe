@@ -277,17 +277,20 @@ static char *escape_str(char *buf, ssize_t buf_size,
 	return orig_buf;
 }
 
-static char *get_data_type_str(int type)
+static char *get_data_type_str(char *buf, int type)
 {
 	switch(type) {
 		case 0: return "output";
 		case SCRIBE_DATA_INPUT: return "input";
 		case SCRIBE_DATA_INPUT | SCRIBE_DATA_STRING: return "input string";
+		case SCRIBE_DATA_NON_DETERMINISTIC | SCRIBE_DATA_NEED_INFO:
 		case SCRIBE_DATA_NON_DETERMINISTIC: return "non-det output";
 		case SCRIBE_DATA_INTERNAL: return "internal";
 		case SCRIBE_DATA_ZERO | SCRIBE_DATA_NON_DETERMINISTIC:
 		case SCRIBE_DATA_ZERO: return "zero output";
-		default: return "unkown";
+		default:
+			sprintf(buf, "unknown (%02x)", type);
+			return buf;
 	}
 }
 
@@ -349,7 +352,7 @@ static const char *get_res_raw_type_str(int type)
 		case SCRIBE_RES_TYPE_TASK: return "task";
 		case SCRIBE_RES_TYPE_FUTEX: return "futex";
 		case SCRIBE_RES_TYPE_IPC: return "ipc";
-		default: return "unkown type";
+		default: return "unknown type";
 	}
 }
 
@@ -397,12 +400,14 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       get_strv_str(buffer1, 100, (char *)e->data, 0, e->argc),
 	       get_strv_str(buffer2, 50, (char *)e->data, e->argc, e->envc));
 	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);
+	__TYPE(SCRIBE_EVENT_DATA_INFO, "data info, ptr = %p, size = %u",
+	       (void *)e->user_ptr, e->size);
 	__TYPE(SCRIBE_EVENT_DATA, "data: size = %u, %s",
 	       e->h.size, escape_str(buffer1, 100, e->data, e->h.size));
 	__TYPE(SCRIBE_EVENT_DATA_EXTRA, "data: %s, ptr = %p, size = %u, %s",
-	       get_data_type_str(e->data_type),
+	       get_data_type_str(buffer1, e->data_type),
 	       (void *)e->user_ptr, e->h.size,
-	       escape_str(buffer1, 100, e->data, e->h.size));
+	       escape_str(buffer2, 100, e->data, e->h.size));
 	__TYPE(SCRIBE_EVENT_SYSCALL, "syscall() = %s",
 	       get_ret_str(buffer2, e->ret));
 	__TYPE(SCRIBE_EVENT_SYSCALL_EXTRA, "%s() = %s",
@@ -473,7 +478,7 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "event size = %d", e->size);
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_TYPE,
 	       "data type = %s",
-	       get_data_type_str(e->type));
+	       get_data_type_str(buffer1, e->type));
 	__TYPE(SCRIBE_EVENT_DIVERGE_DATA_PTR,
 	       "data user ptr = %p",
 	       (void *)e->user_ptr);
