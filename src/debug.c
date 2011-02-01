@@ -112,6 +112,13 @@ static char *syscall_socketcall_str[] = {
 	"accept4", "recvmmsg"
 };
 
+static char *syscall_futex_str[] = {
+	"futex_wait", "futex_wake", "futex_fd", "futex_requeue",
+	"futex_cmp_requeue", "futex_wake_op", "futex_lock_pi",
+	"futex_unlock_pi", "futex_trylock_pi", "futex_wait_bitset",
+	"futex_wake_bitset", "futex_wait_requeue_pi", "futex_cmp_requeue_pi"
+};
+
 static char *get_syscall_str(char *buffer, unsigned int n)
 {
 	char *str;
@@ -119,6 +126,8 @@ static char *get_syscall_str(char *buffer, unsigned int n)
 	if ((str = GET_STR(syscall, n)))
 		return str;
 	if ((str = GET_STR(syscall_socketcall, n - SCRIBE_SOCKETCALL_BASE - 1)))
+		return str;
+	if ((str = GET_STR(syscall_futex, n - SCRIBE_FUTEX_BASE)))
 		return str;
 
 	sprintf(buffer, "syscall_%d", n);

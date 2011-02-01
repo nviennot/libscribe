@@ -101,6 +101,7 @@
  * Syscalls offsets for multiplexed calls
  */
 #define SCRIBE_SOCKETCALL_BASE		0xf000
+#define SCRIBE_FUTEX_BASE		0xf100
 
 
 enum scribe_event_type {
