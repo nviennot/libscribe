@@ -127,12 +127,12 @@ SCRIBE_EVENT(resource_lock_intr)
 
 SCRIBE_EVENT(resource_lock_extra,
 	__field(__u8, type)
-	__field(__u32, object)
+	__field(__u32, id)
 	__field(__u32, serial)
 )
 
 SCRIBE_EVENT(resource_unlock,
-	__field(__u32, object)
+	__field(__u32, id)
 )
 
 SCRIBE_EVENT(rdtsc,

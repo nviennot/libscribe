@@ -428,11 +428,11 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "resource lock, serial = %u", e->serial);
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK_INTR, "resource lock interrupted");
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK_EXTRA,
-	       "resource lock, type = %s, object = %p, serial = %u",
+	       "resource lock, type = %s, id = %u, serial = %u",
 	       get_res_type_str(buffer1, sizeof(buffer1), e->type),
-	       (void *)e->object, e->serial);
+	       e->id, e->serial);
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK,
-	       "resource unlock, object = %p", (void *)e->object);
+	       "resource unlock, id = %u", e->id);
 	__TYPE(SCRIBE_EVENT_RDTSC, "rdtsc = %016llx", e->tsc);
 	__TYPE(SCRIBE_EVENT_SIGNAL, "signal: %s, deferred = %s, info = %s",
 	       get_signal_str(buffer1, e->nr),
