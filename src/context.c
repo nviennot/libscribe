@@ -418,12 +418,14 @@ pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
 	if (!new_argv)
 		return -1;
 
-	new_argv[0] = "scribe_init";
-	for (i = 1; i < argc; i++)
-		new_argv[i] = argv[i-1];
-	new_argv[i] = NULL;
+	if (!(flags & SCRIBE_CUSTOM_INIT)) {
+		new_argv[0] = "scribe_init";
+		for (i = 1; i < argc; i++)
+			new_argv[i] = argv[i-1];
+		new_argv[i] = NULL;
 
-	argv = new_argv;
+		argv = new_argv;
+	}
 
 	if (!envp)
 		envp = environ;
