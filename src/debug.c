@@ -428,8 +428,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "resource lock, serial = %u", e->serial);
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK_INTR, "resource lock interrupted");
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK_EXTRA,
-	       "resource lock, type = %s, id = %u, serial = %u",
+	       "resource lock, type = %s, access = %s, id = %u, serial = %u",
 	       get_res_type_str(buffer1, sizeof(buffer1), e->type),
+	       e->write_access ? "write" : "read",
 	       e->id, e->serial);
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK,
 	       "resource unlock, id = %u", e->id);
