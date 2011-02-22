@@ -89,6 +89,11 @@ int scribe_stop(scribe_context_t ctx);
 int scribe_bookmark(scribe_context_t ctx);
 
 /*
+ * Check if a deadlock happened during the replay
+ */
+int scribe_check_deadlock(scribe_context_t ctx);
+
+/*
  * scribe_get_event_str() returns the string representation of an event
  */
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event);

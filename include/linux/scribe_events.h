@@ -223,6 +223,8 @@ SCRIBE_EVENT(golive_on_bookmark_id,
 	__field(__u32, id)
 )
 
+SCRIBE_EVENT(check_deadlock)
+
 /* Notification events */
 SCRIBE_START_NOTIFICATION_DECL
 

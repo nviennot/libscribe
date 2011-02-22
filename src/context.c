@@ -147,6 +147,13 @@ static int scribe_golive_on_bookmark(scribe_context_t ctx, int id)
 	return _cmd(ctx, &e);
 }
 
+int scribe_check_deadlock(scribe_context_t ctx)
+{
+	struct scribe_event_check_deadlock e =
+		{.h = {.type = SCRIBE_EVENT_CHECK_DEADLOCK}};
+	return _cmd(ctx, &e);
+}
+
 static void default_init_loader(char *const *argv, char *const *envp)
 {
 	if (envp && envp != environ) {
