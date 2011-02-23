@@ -107,11 +107,11 @@ SCRIBE_EVENT_SIZED(data_extra,
 )
 
 SCRIBE_EVENT(syscall,
-	__field(__u32, ret)
+	__field(__s32, ret)
 )
 
 SCRIBE_EVENT(syscall_extra,
-	__field(__u32, ret) /* FIXME 64 bit support ? */
+	__field(__s32, ret) /* FIXME 64 bit support ? */
 	__field(__u16, nr)
 )
 
@@ -270,7 +270,7 @@ SCRIBE_EVENT_DIVERGE(syscall,
 )
 
 SCRIBE_EVENT_DIVERGE(syscall_ret,
-	__field(__u32, ret)
+	__field(__s32, ret)
 )
 
 SCRIBE_EVENT_DIVERGE(fence_serial,
