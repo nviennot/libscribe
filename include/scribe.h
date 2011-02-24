@@ -64,8 +64,12 @@ int scribe_context_destroy(scribe_context_t ctx);
  * For replay @flags has no effect (the one used for the recording are used).
  */
 #define SCRIBE_CUSTOM_INIT 0x01
-pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd, char *const *argv, char *const *envp);
-pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd, int backtrace_len, int golive_bookmark_id);
+pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
+		    char *const *argv, char *const *envp,
+		    const char *cwd, const char *chroot);
+pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
+		    int backtrace_len, int golive_bookmark_id);
+
 
 /*
  * Wait for the record/replay to finish. It also allow your notifications to

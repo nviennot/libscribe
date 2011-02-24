@@ -403,10 +403,12 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 		return str;					\
 	}
 	__TYPE(SCRIBE_EVENT_INIT,
-	       "init: flags = %08x, argv = \"%s\", envp = \"%s\"",
+	       "init: flags = %08x, cwd = \"%s\", chroot = \"%s\", argv = \"%s\", envp = \"%s\"",
 	       e->flags,
-	       get_strv_str(buffer1, 100, (char *)e->data, 0, e->argc),
-	       get_strv_str(buffer2, 50, (char *)e->data, e->argc, e->envc));
+	       get_strv_str(buffer1    , 100, (char *)e->data, e->argc+e->envc, 1),
+	       get_strv_str(buffer1+100, 100, (char *)e->data, e->argc+e->envc+1, 1),
+	       get_strv_str(buffer1+200, 100, (char *)e->data, 0, e->argc),
+	       get_strv_str(buffer1+300, 30, (char *)e->data, e->argc, e->envc));
 	__TYPE(SCRIBE_EVENT_PID, "pid=%d", e->pid);
 	__TYPE(SCRIBE_EVENT_DATA_INFO, "data info: %s, ptr = %p, size = %u",
 	       get_data_type_str(buffer1, e->data_type),

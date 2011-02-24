@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 
 	scribe_context_create(&ctx, NULL, NULL);
 
-	if (scribe_record(ctx, 0, logfile, argv+1, NULL) < 0)
+	if (scribe_record(ctx, 0, logfile, argv+1, NULL, NULL, NULL) < 0)
 		LIBERROR("can't record");
 
 	if (scribe_wait(ctx) < 0)

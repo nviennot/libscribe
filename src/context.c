@@ -200,11 +200,21 @@ struct child_args {
 	scribe_context_t ctx;
 	char *const *argv;
 	char *const *envp;
+	const char *cwd;
+	const char *chroot;
 };
 static int init_process(void *_fn_args)
 {
 	struct child_args *fn_args = _fn_args;
 	scribe_context_t ctx = fn_args->ctx;
+
+	if (fn_args->chroot) {
+		if (chroot(fn_args->chroot) < 0)
+			goto bad;
+	}
+
+	if (chdir(fn_args->cwd) < 0)
+		goto bad;
 
 	if (mount_new_proc() < 0)
 		goto bad;
@@ -240,12 +250,15 @@ bad:
 
 static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
 			  int log_fd, int backtrace_len, int golive_bookmark_id,
-			  char *const *argv, char *const *envp)
+			  char *const *argv, char *const *envp,
+			  const char *cwd, const char *chroot)
 {
 	struct child_args fn_args = {
 		.ctx = ctx,
 		.argv = argv,
 		.envp = envp,
+		.cwd = cwd,
+		.chroot = chroot
 	};
 	pid_t init_pid;
 	int clone_flags;
@@ -318,7 +331,8 @@ static ssize_t _write(int fd, const void *buf, size_t count)
 }
 
 static int save_init(int log_fd, int flags,
-		     char *const *argv, char *const *envp)
+		     char *const *argv, char *const *envp,
+		     const char *cwd, const char *chroot)
 {
 	struct scribe_event_init *e;
 	int argc, envc;
@@ -327,9 +341,16 @@ static int save_init(int log_fd, int flags,
 	int ret;
 	char *data;
 
+	if (cwd == NULL)
+		cwd = "";
+	if (chroot == NULL)
+		chroot = "";
+
 	size = 0;
 	for (argc = 0; argv[argc]; size += strlen(argv[argc])+1, argc++);
 	for (envc = 0; envp[envc]; size += strlen(envp[envc])+1, envc++);
+	size += strlen(cwd) + 1;
+	size += strlen(chroot) + 1;
 
 	total_size = size + sizeof_event_from_type(SCRIBE_EVENT_INIT);
 	e = malloc(total_size);
@@ -351,6 +372,12 @@ static int save_init(int log_fd, int flags,
 		data += strlen(envp[i]) + 1;
 	}
 
+	strcpy(data, cwd);
+	data += strlen(cwd) + 1;
+
+	strcpy(data, chroot);
+	data += strlen(chroot) + 1;
+
 	ret = _write(log_fd, e, total_size);
 	free(e);
 	if (ret < 0)
@@ -359,7 +386,8 @@ static int save_init(int log_fd, int flags,
 }
 
 static int restore_init(int log_fd, int *flags,
-			void **_data, char ***_argv, char ***_envp)
+			void **_data, char ***_argv, char ***_envp,
+			char **cwd, char **chroot)
 {
 	struct scribe_event_init e;
 	char *data = NULL;
@@ -398,15 +426,33 @@ static int restore_init(int log_fd, int *flags,
 	}
 	envp[i] = NULL;
 
+	*cwd = data;
+	data += strlen(data) + 1;
+	if (strlen(*cwd) == 0)
+		*cwd = NULL;
+
+	*chroot = data;
+	data += strlen(data) + 1;
+	if (strlen(*chroot) == 0)
+		*chroot = NULL;
+
 	return 0;
 }
 
 pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
-		    char *const *argv, char *const *envp)
+		    char *const *argv, char *const *envp,
+		    const char *cwd, const char *chroot)
 {
+	char cwd_buffer[PATH_MAX];
 	char **new_argv = NULL;
 	int argc, i;
 	pid_t ret;
+
+	if (!cwd) {
+		cwd = getcwd(cwd_buffer, sizeof(cwd_buffer));
+		if (!cwd)
+			return -1;
+	}
 
 	for (argc = 0; argv[argc]; argc++);
 
@@ -437,13 +483,13 @@ pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
 	if (!envp)
 		envp = environ;
 
-	if (save_init(log_fd, flags, argv, envp) < 0) {
+	if (save_init(log_fd, flags, argv, envp, cwd, chroot) < 0) {
 		free(new_argv);
 		return -1;
 	}
 
 	ret = scribe_start(ctx, SCRIBE_RECORD, flags, log_fd,
-			   0, -1, argv, envp);
+			   0, -1, argv, envp, cwd, chroot);
 
 	free(new_argv);
 	return ret;
@@ -455,8 +501,10 @@ pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
 	pid_t ret;
 	void *data;
 	char **argv, **envp;
+	char *cwd, *chroot;
 
-	if (restore_init(log_fd, &flags, &data, &argv, &envp) < 0)
+	if (restore_init(log_fd, &flags, &data,
+			 &argv, &envp, &cwd, &chroot) < 0)
 		return -1;
 
 	if (backtrace_len) {
@@ -470,7 +518,8 @@ pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
 	}
 
 	ret = scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd,
-			   backtrace_len, golive_bookmark_id, argv, envp);
+			   backtrace_len, golive_bookmark_id,
+			   argv, envp, cwd, chroot);
 	free(data);
 	return ret;
 }
