@@ -449,9 +449,13 @@ pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
 	pid_t ret;
 
 	if (!cwd) {
-		cwd = getcwd(cwd_buffer, sizeof(cwd_buffer));
-		if (!cwd)
-			return -1;
+		if (chroot)
+			cwd = "/";
+		else {
+			cwd = getcwd(cwd_buffer, sizeof(cwd_buffer));
+			if (!cwd)
+				return -1;
+		}
 	}
 
 	for (argc = 0; argv[argc]; argc++);
