@@ -171,8 +171,7 @@ static void default_init_loader(char *const *argv, char *const *envp)
 
 static int mount_new_proc(void)
 {
-	if (umount2("/proc", MNT_DETACH) < 0)
-		return -1;
+	umount2("/proc", MNT_DETACH);
 	if (mount("proc", "/proc", "proc", 0, NULL))
 		return -1;
 	return 0;
@@ -184,8 +183,7 @@ static int mount_new_devpts(void)
 	 * TODO Instead of hardcoding the group and the mode, use the original
 	 * ones.
 	 */
-	if (umount2("/dev/pts", MNT_DETACH) < 0)
-		return -1;
+	umount2("/dev/pts", MNT_DETACH);
 	if (mount("devpts", "/dev/pts", "devpts",
 		  MS_NOEXEC | MS_NOSUID | MS_RELATIME,
 		  "newinstance,gid=5,mode=0620,ptmxmode=0666"))
