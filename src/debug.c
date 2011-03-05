@@ -109,7 +109,7 @@ static char *syscall_socketcall_str[] = {
 	"socket", "bind", "connect", "listen", "accept", "getsockname",
 	"getpeername", "socketpair", "send", "recv", "sendto", "recvfrom",
 	"shutdown", "setsockopt", "getsockopt", "sendmsg", "recvmsg",
-	"accept4", "recvmmsg"
+	"accept4", "recvmmsg2"
 };
 
 static char *syscall_futex_str[] = {

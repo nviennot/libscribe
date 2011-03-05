@@ -21,6 +21,8 @@
 
 #include <linux/types.h>
 #include <linux/ptrace.h>
+#include <linux/net.h>
+#include <linux/futex.h>
 #include <linux/scribe_defines.h>
 
 #include <sys/types.h>
@@ -104,6 +106,40 @@
  */
 #define SCRIBE_SOCKETCALL_BASE		0xf000
 #define SCRIBE_FUTEX_BASE		0xf100
+
+#define __NR_socket		(SCRIBE_SOCKETCALL_BASE + SYS_SOCKET)
+#define __NR_bind		(SCRIBE_SOCKETCALL_BASE + SYS_BIND)
+#define __NR_connect		(SCRIBE_SOCKETCALL_BASE + SYS_CONNECT)
+#define __NR_listen		(SCRIBE_SOCKETCALL_BASE + SYS_LISTEN)
+#define __NR_accept		(SCRIBE_SOCKETCALL_BASE + SYS_ACCEPT)
+#define __NR_getsockname	(SCRIBE_SOCKETCALL_BASE + SYS_GETSOCKNAME)
+#define __NR_getpeername	(SCRIBE_SOCKETCALL_BASE + SYS_GETPEERNAME)
+#define __NR_socketpair		(SCRIBE_SOCKETCALL_BASE + SYS_SOCKETPAIR)
+#define __NR_send		(SCRIBE_SOCKETCALL_BASE + SYS_SEND)
+#define __NR_recv		(SCRIBE_SOCKETCALL_BASE + SYS_RECV)
+#define __NR_sendto		(SCRIBE_SOCKETCALL_BASE + SYS_SENDTO)
+#define __NR_recvfrom		(SCRIBE_SOCKETCALL_BASE + SYS_RECVFROM)
+#define __NR_shutdown		(SCRIBE_SOCKETCALL_BASE + SYS_SHUTDOWN)
+#define __NR_setsockopt		(SCRIBE_SOCKETCALL_BASE + SYS_SETSOCKOPT)
+#define __NR_getsockopt		(SCRIBE_SOCKETCALL_BASE + SYS_GETSOCKOPT)
+#define __NR_sendmsg		(SCRIBE_SOCKETCALL_BASE + SYS_SENDMSG)
+#define __NR_recvmsg		(SCRIBE_SOCKETCALL_BASE + SYS_RECVMSG)
+#define __NR_accept4		(SCRIBE_SOCKETCALL_BASE + SYS_ACCEPT4)
+#define __NR_recvmmsg2		(SCRIBE_SOCKETCALL_BASE + SYS_RECVMMSG)
+
+#define __NR_futex_wait		(SCRIBE_FUTEX_BASE + FUTEX_WAIT)
+#define __NR_futex_wake		(SCRIBE_FUTEX_BASE + FUTEX_WAKE)
+#define __NR_futex_fd		(SCRIBE_FUTEX_BASE + FUTEX_FD)
+#define __NR_futex_requeue	(SCRIBE_FUTEX_BASE + FUTEX_REQUEUE)
+#define __NR_futex_cmp_requeue	(SCRIBE_FUTEX_BASE + FUTEX_CMP_REQUEUE)
+#define __NR_futex_wake_op	(SCRIBE_FUTEX_BASE + FUTEX_WAKE_OP)
+#define __NR_futex_lock_pi	(SCRIBE_FUTEX_BASE + FUTEX_LOCK_PI)
+#define __NR_futex_unlock_pi	(SCRIBE_FUTEX_BASE + FUTEX_UNLOCK_PI)
+#define __NR_futex_trylock_pi	(SCRIBE_FUTEX_BASE + FUTEX_TRYLOCK_PI)
+#define __NR_futex_wait_bitset	(SCRIBE_FUTEX_BASE + FUTEX_WAIT_BITSET)
+#define __NR_futex_wake_bitset	(SCRIBE_FUTEX_BASE + FUTEX_WAKE_BITSET)
+#define __NR_futex_wait_requeue_pi (SCRIBE_FUTEX_BASE + FUTEX_WAIT_REQUEUE_PI)
+#define __NR_futex_cmp_requeue_pi (SCRIBE_FUTEX_BASE + FUTEX_CMP_REQUEUE_PI)
 
 
 enum scribe_event_type {
