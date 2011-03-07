@@ -129,12 +129,11 @@ static inline void clear_regs(void)
 
 static inline void scribe_on_replay(void (*fn)(void *arg), void *arg)
 {
-	if (scribe_is_replaying()) {
-		scribe_disable();
+	scribe_disable();
+	if (scribe_is_replaying())
 		fn(arg);
-		scribe_enable();
-	}
 	clear_regs();
+	scribe_enable();
 }
 
 #endif /*_SCRIBE_H */
