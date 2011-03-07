@@ -14,6 +14,11 @@
 
 
 
+/*
+ * XXX When adding a new resource type, don't forget to call reset_resource()
+ * when the resource object is about to vanish...
+ */
+
 enum scribe_resource_type {
 	SCRIBE_RES_TYPE_INODE,
 	SCRIBE_RES_TYPE_FILE,
@@ -22,6 +27,7 @@ enum scribe_resource_type {
 	SCRIBE_RES_TYPE_FUTEX,
 	SCRIBE_RES_TYPE_IPC,
 	SCRIBE_RES_TYPE_PTRACE,
+	SCRIBE_RES_TYPE_MMAP,
 };
 #define SCRIBE_RES_TYPE_MASK		0x0f
 #define SCRIBE_RES_SPINLOCK		0x80
