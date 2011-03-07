@@ -360,7 +360,6 @@ static const char *get_res_raw_type_str(int type)
 		case SCRIBE_RES_TYPE_PID: return "pid";
 		case SCRIBE_RES_TYPE_FUTEX: return "futex";
 		case SCRIBE_RES_TYPE_IPC: return "ipc";
-		case SCRIBE_RES_TYPE_CRED: return "credential";
 		case SCRIBE_RES_TYPE_PTRACE: return "ptrace";
 		default: return "unknown type";
 	}
