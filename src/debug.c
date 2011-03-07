@@ -511,8 +511,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_DIVERGE_FENCE_SERIAL,
 	       "fence serial = %u", e->serial);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_OWNED,
-	       "memory access, trying to %s to address = %08x",
-	       e->write_access ? "write" : "read", e->address);
+	       "memory access, trying to %s page = %08x",
+	       e->write_access ? "write to" : "read", e->address);
 	__TYPE(SCRIBE_EVENT_DIVERGE_MEM_NOT_OWNED,
 	       "memory address, page not owned");
 	__TYPE(SCRIBE_EVENT_DIVERGE_REGS, "regs: %s",
