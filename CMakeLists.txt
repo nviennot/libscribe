@@ -13,6 +13,7 @@ install(TARGETS scribe scribe_init
 )
 install(FILES include/scribe.h DESTINATION /usr/include)
 install(FILES include/linux/scribe_events.h
-	      include/linux/scribe_api.h
 	      include/linux/scribe_defines.h
+	      include/linux/scribe_resource.h
+	      include/linux/scribe_api.h
 	DESTINATION /usr/include/linux)
