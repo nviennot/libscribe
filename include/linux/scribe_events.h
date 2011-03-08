@@ -125,11 +125,12 @@ SCRIBE_EVENT(resource_lock,
 
 SCRIBE_EVENT(resource_lock_intr)
 
-SCRIBE_EVENT(resource_lock_extra,
+SCRIBE_EVENT_SIZED(resource_lock_extra,
 	__field(__u8, type)
 	__field(__u8, write_access)
 	__field(__u32, id)
 	__field(__u32, serial)
+	__field(__u8, desc[0])
 )
 
 SCRIBE_EVENT(resource_unlock,

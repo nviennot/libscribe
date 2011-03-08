@@ -390,6 +390,17 @@ static char *get_regs_str(char *buf, size_t buf_size, struct pt_regs *regs)
 		 regs->xds, regs->xes, regs->xfs, regs->xgs, regs->xss);
 	return buf;
 }
+
+static char *get_res_desc(char *buf, size_t buf_size,
+			  const void *desc, size_t desc_size)
+{
+	if (buf_size - 1 < desc_size)
+		desc_size = buf_size - 1;
+	memcpy(buf, desc, desc_size);
+	buf[desc_size] = '\0';
+	return buf;
+}
+
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
@@ -432,10 +443,11 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "resource lock, serial = %u", e->serial);
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK_INTR, "resource lock interrupted");
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK_EXTRA,
-	       "resource lock, type = %s, access = %s, id = %u, serial = %u",
+	       "resource lock, type = %s, access = %s, id = %u, "
+	       "serial = %u, desc = %s",
 	       get_res_type_str(buffer1, sizeof(buffer1), e->type),
-	       e->write_access ? "write" : "read",
-	       e->id, e->serial);
+	       e->write_access ? "write" : "read", e->id, e->serial,
+	       get_res_desc(buffer2, sizeof(buffer2), e->desc, e->h.size));
 	__TYPE(SCRIBE_EVENT_RESOURCE_UNLOCK,
 	       "resource unlock, id = %u", e->id);
 	__TYPE(SCRIBE_EVENT_RDTSC, "rdtsc = %016llx", e->tsc);
