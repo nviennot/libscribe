@@ -361,6 +361,7 @@ static const char *get_res_raw_type_str(char *buf, size_t buf_size, int type)
 		case SCRIBE_RES_TYPE_FUTEX: return "futex";
 		case SCRIBE_RES_TYPE_IPC: return "ipc";
 		case SCRIBE_RES_TYPE_MMAP: return "mmap";
+		case SCRIBE_RES_TYPE_PPID: return "ppid";
 		default:
 			snprintf(buf, buf_size, "unknown type %d", type);
 			return buf;
