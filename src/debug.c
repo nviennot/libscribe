@@ -285,9 +285,8 @@ static char *escape_str(char *buf, ssize_t buf_size,
 	return orig_buf;
 }
 
-static char *get_data_type_str(char *buf, int type)
+static char *__get_data_type_str(char *buf, int type)
 {
-	type &= ~SCRIBE_DATA_NEED_INFO;
 	switch(type) {
 		case 0: return "output";
 		case SCRIBE_DATA_INPUT: return "input";
@@ -300,6 +299,17 @@ static char *get_data_type_str(char *buf, int type)
 			sprintf(buf, "unknown (%02x)", type);
 			return buf;
 	}
+}
+
+static char *get_data_type_str(char *buf, int type)
+{
+	char tmp[100];
+
+	sprintf(buf, "%s%s",
+		__get_data_type_str(tmp, type & ~SCRIBE_DATA_NEED_INFO),
+		(type & SCRIBE_DATA_NEED_INFO) ? " (need_info)" : "");
+
+	return buf;
 }
 
 static char *get_diverge_data_str(char *buf, ssize_t buf_size, int offset,
