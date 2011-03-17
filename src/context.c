@@ -281,7 +281,8 @@ static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
 	}
 
 
-	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | SIGCHLD;
+	clone_flags = CLONE_NEWPID | CLONE_NEWIPC | CLONE_NEWNS | CLONE_NEWNET |
+			SIGCHLD;
 	init_pid = clone(init_process, stack + STACK_SIZE, clone_flags, &fn_args);
 	free(stack);
 
