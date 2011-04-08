@@ -41,7 +41,11 @@ struct scribe_operations {
 	/* Notifications during the replay */
 	void (*on_backtrace) (void *private_data, loff_t *log_offset, int num);
 	void (*on_diverge) (void *private_data, struct scribe_event_diverge *event);
+	void (*on_bookmark) (void *private_data, int id, int npr);
 };
+
+/* The default init_loader */
+void scribe_default_init_loader(char *const *argv, char *const *envp);
 
 /*
  * Create a scribe context to use the record/replay features
@@ -69,7 +73,7 @@ pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
 		    char *const *argv, char *const *envp,
 		    const char *cwd, const char *chroot);
 pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
-		    int backtrace_len, int golive_bookmark_id);
+		    int backtrace_len);
 
 
 /*
@@ -82,10 +86,16 @@ int scribe_wait(scribe_context_t ctx);
 
 /*
  * Abort the record: It will stop the recording ASAP.
- * Abort the replay: It will go live when it can (right now, it will do so on
- * the next bookmark).
+ * Abort the replay: It will go live when it can (right now, you may only use
+ * it when called from on_bookmark()).
  */
 int scribe_stop(scribe_context_t ctx);
+
+
+/*
+ * Continues execution when a notification got fired
+ */
+int scribe_resume(scribe_context_t ctx);
 
 /*
  * Request a bookmark during the recording. All processes will sync together,

@@ -115,7 +115,7 @@ static int __scribe_replay(scribe_context_t ctx, int flags, int log_fd,
 			.backtrace_len = backtrace_len };
 	return _cmd(ctx, &e);
 }
-static int __scribe_stop(scribe_context_t ctx)
+int scribe_stop(scribe_context_t ctx)
 {
 	struct scribe_event_stop e = {.h = {.type = SCRIBE_EVENT_STOP}};
 	return _cmd(ctx, &e);
@@ -133,17 +133,10 @@ int scribe_bookmark(scribe_context_t ctx)
 		{.h = {.type = SCRIBE_EVENT_BOOKMARK_REQUEST}};
 	return _cmd(ctx, &e);
 }
-static int scribe_golive_on_next_bookmark(scribe_context_t ctx)
+int scribe_resume(scribe_context_t ctx)
 {
-	struct scribe_event_golive_on_next_bookmark e =
-		{.h = {.type = SCRIBE_EVENT_GOLIVE_ON_NEXT_BOOKMARK}};
-	return _cmd(ctx, &e);
-}
-static int scribe_golive_on_bookmark(scribe_context_t ctx, int id)
-{
-	struct scribe_event_golive_on_bookmark_id e =
-		{.h = {.type = SCRIBE_EVENT_GOLIVE_ON_BOOKMARK_ID},
-			.id = id};
+	struct scribe_event_resume e =
+		{.h = {.type = SCRIBE_EVENT_RESUME}};
 	return _cmd(ctx, &e);
 }
 
@@ -154,7 +147,7 @@ int scribe_check_deadlock(scribe_context_t ctx)
 	return _cmd(ctx, &e);
 }
 
-static void default_init_loader(char *const *argv, char *const *envp)
+void scribe_default_init_loader(char *const *argv, char *const *envp)
 {
 	if (envp && envp != environ) {
 		if (clearenv())
@@ -233,7 +226,7 @@ static int init_process(void *_fn_args)
 		ctx->ops->init_loader(ctx->private_data,
 				      fn_args->argv, fn_args->envp);
 	else
-		default_init_loader(fn_args->argv, fn_args->envp);
+		scribe_default_init_loader(fn_args->argv, fn_args->envp);
 
 bad:
 	/* TODO propagate the error through a pipe to the parent */
@@ -247,7 +240,7 @@ bad:
 #define SCRIBE_REPLAY	2
 
 static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
-			  int log_fd, int backtrace_len, int golive_bookmark_id,
+			  int log_fd, int backtrace_len,
 			  char *const *argv, char *const *envp,
 			  const char *cwd, const char *chroot)
 {
@@ -271,9 +264,6 @@ static pid_t scribe_start(scribe_context_t ctx, int action, int flags,
 		ret = __scribe_record(ctx, flags, log_fd);
 	else
 		ret = __scribe_replay(ctx, flags, log_fd, backtrace_len);
-
-	if (!ret && golive_bookmark_id != -1)
-		ret |= scribe_golive_on_bookmark(ctx, golive_bookmark_id);
 
 	if (ret) {
 		free(stack);
@@ -492,14 +482,14 @@ pid_t scribe_record(scribe_context_t ctx, int flags, int log_fd,
 	}
 
 	ret = scribe_start(ctx, SCRIBE_RECORD, flags, log_fd,
-			   0, -1, argv, envp, cwd, chroot);
+			   0, argv, envp, cwd, chroot);
 
 	free(new_argv);
 	return ret;
 }
 
 pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
-		    int backtrace_len, int golive_bookmark_id)
+		    int backtrace_len)
 {
 	pid_t ret;
 	void *data;
@@ -521,8 +511,7 @@ pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
 	}
 
 	ret = scribe_start(ctx, SCRIBE_REPLAY, flags, log_fd,
-			   backtrace_len, golive_bookmark_id,
-			   argv, envp, cwd, chroot);
+			   backtrace_len, argv, envp, cwd, chroot);
 	free(data);
 	return ret;
 }
@@ -551,13 +540,20 @@ int scribe_wait(scribe_context_t ctx)
 			backtrace_len = 0;
 		}
 
+		if (e->type == SCRIBE_EVENT_BOOKMARK_REACHED &&
+		    ctx->ops && ctx->ops->on_bookmark) {
+			struct scribe_event_bookmark_reached *bev = (void*)e;
+			ctx->ops->on_bookmark(ctx->private_data,
+					      bev->id, bev->npr);
+		}
+
 		if (is_diverge_type(e->type) && ctx->ops && ctx->ops->on_diverge) {
 			ctx->ops->on_diverge(ctx->private_data,
 					     (struct scribe_event_diverge *)e);
 		}
 
 		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
-			struct scribe_event_context_idle *idle = (void*)buffer;
+			struct scribe_event_context_idle *idle = (void*)e;
 			if (idle->error) {
 				errno = -idle->error;
 				return -1;
@@ -566,11 +562,4 @@ int scribe_wait(scribe_context_t ctx)
 		}
 	}
 	return 0;
-}
-
-int scribe_stop(scribe_context_t ctx)
-{
-	if (ctx->mode == SCRIBE_REPLAY)
-		return scribe_golive_on_next_bookmark(ctx);
-	return __scribe_stop(ctx);
 }
