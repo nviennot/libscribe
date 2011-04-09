@@ -196,6 +196,14 @@ SCRIBE_EVENT(sig_recv_cookie,
 	__field(__u32, cookie)
 )
 
+SCRIBE_EVENT(sig_handled_cookie,
+	__field(__u32, cookie)
+)
+
+SCRIBE_EVENT(sig_handled,
+	__field(__u8, nr)
+)
+
 /* Command events */
 SCRIBE_START_COMMAND_DECL
 

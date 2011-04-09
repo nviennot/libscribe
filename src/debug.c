@@ -493,6 +493,10 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "signal send, cookie = %u", e->cookie);
 	__TYPE(SCRIBE_EVENT_SIG_RECV_COOKIE,
 	       "signal recv, cookie = %u", e->cookie);
+	__TYPE(SCRIBE_EVENT_SIG_HANDLED_COOKIE,
+	       "signal handled, cookie = %u", e->cookie);
+	__TYPE(SCRIBE_EVENT_SIG_HANDLED,
+	       "signal handled, signal = %s", get_signal_str(buffer1, e->nr));
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
