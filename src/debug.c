@@ -361,7 +361,7 @@ static char *get_strv_str(char *buf, ssize_t buf_size,
 	return orig_buf;
 }
 
-static const char *get_res_raw_type_str(char *buf, size_t buf_size, int type)
+static const char *get_res_type_str(char *buf, size_t buf_size, int type)
 {
 	switch (type) {
 		case SCRIBE_RES_TYPE_INODE: return "inode";
@@ -376,19 +376,6 @@ static const char *get_res_raw_type_str(char *buf, size_t buf_size, int type)
 			snprintf(buf, buf_size, "unknown type %d", type);
 			return buf;
 	}
-}
-
-static char *get_res_type_str(char *buf, size_t buf_size, int type)
-{
-	char buffer[100];
-	int is_spinlock;
-
-	is_spinlock = type & SCRIBE_RES_SPINLOCK;
-	type &= SCRIBE_RES_TYPE_MASK;
-	snprintf(buf, buf_size, "%s%s",
-		 get_res_raw_type_str(buffer, sizeof(buffer), type),
-		 is_spinlock ? " (spinlock)" : "");
-	return buf;
 }
 
 static char *get_regs_str(char *buf, size_t buf_size, struct pt_regs *regs)
