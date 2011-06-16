@@ -246,6 +246,11 @@ SCRIBE_EVENT(bookmark_reached,
 	__field(__u32, npr)
 )
 
+SCRIBE_EVENT(on_attach,
+	__field(__u32, real_pid)
+	__field(__u32, scribe_pid)
+)
+
 /* Diverge Notification events */
 SCRIBE_START_DIVERGE_NOTIFICATION_DECL
 

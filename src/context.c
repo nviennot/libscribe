@@ -547,6 +547,13 @@ int scribe_wait(scribe_context_t ctx)
 					      bev->id, bev->npr);
 		}
 
+		if (e->type == SCRIBE_EVENT_ON_ATTACH &&
+		    ctx->ops && ctx->ops->on_attach) {
+			struct scribe_event_on_attach *oaev = (void*)e;
+			ctx->ops->on_attach(ctx->private_data,
+					    oaev->real_pid, oaev->scribe_pid);
+		}
+
 		if (is_diverge_type(e->type) && ctx->ops && ctx->ops->on_diverge) {
 			ctx->ops->on_diverge(ctx->private_data,
 					     (struct scribe_event_diverge *)e);
