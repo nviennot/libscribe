@@ -378,6 +378,17 @@ static const char *get_res_type_str(char *buf, size_t buf_size, int type)
 	}
 }
 
+static char *get_bookmark_type_str(char *buf, size_t buf_size, int type)
+{
+	switch (type) {
+		case SCRIBE_BOOKMARK_PRE_SYSCALL: return "pre-syscall";
+		case SCRIBE_BOOKMARK_POST_SYSCALL: return "post-syscall";
+		default:
+			snprintf(buf, buf_size, "unknown type %d", type);
+			return buf;
+	}
+}
+
 static char *get_regs_str(char *buf, size_t buf_size, struct pt_regs *regs)
 {
 	snprintf(buf, buf_size,
@@ -475,7 +486,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_REGS, "regs: %s",
 	       get_regs_str(buffer1, sizeof(buffer1), &e->regs));
 	__TYPE(SCRIBE_EVENT_BOOKMARK,
-	       "bookmark, id = %u, npr = %u", e->id, e->npr);
+	       "bookmark, type = %s, id = %u, npr = %u",
+	       get_bookmark_type_str(buffer1, sizeof(buffer1), e->type),
+	       e->id, e->npr);
 	__TYPE(SCRIBE_EVENT_SIG_SEND_COOKIE,
 	       "signal send, cookie = %u", e->cookie);
 	__TYPE(SCRIBE_EVENT_SIG_RECV_COOKIE,

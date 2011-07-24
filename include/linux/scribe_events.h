@@ -184,6 +184,7 @@ SCRIBE_EVENT(regs,
 )
 
 SCRIBE_EVENT(bookmark,
+	__field(__u8, type)
 	__field(__u32, id)
 	__field(__u32, npr)
 )
