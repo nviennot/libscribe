@@ -78,6 +78,7 @@
 #define SCRIBE_PS_ENABLE_MM		0x00002000
 #define SCRIBE_PS_ENABLE_RET_CHECK	0x00004000
 #define SCRIBE_PS_ENABLE_ALL		0x0000ff00
+#define SCRIBE_PS_MUTABLE		0x10000000
 
 /*
  * These flags are used as a data type
@@ -158,6 +159,7 @@ struct scribe_event_sized {
 struct scribe_event_diverge {
 	struct scribe_event h;
 	__u32 pid;
+	__u32 fatal;
 	__u64 last_event_offset;
 } __attribute__((packed));
 

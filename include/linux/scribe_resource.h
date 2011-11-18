@@ -1,6 +1,4 @@
 /*
- *  Scribe, the record/replay mechanism
- *
  * Copyright (C) 2010 Oren Laadan <orenl@cs.columbia.edu>
  * Copyright (C) 2010 Nicolas Viennot <nicolas@viennot.biz>
  *
