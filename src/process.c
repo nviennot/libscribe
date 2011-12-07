@@ -25,38 +25,38 @@
 #define __NR_get_scribe_flags	339
 #define __NR_set_scribe_flags	340
 
-static int get_scribe_flags(void)
+static int get_scribe_flags(pid_t pid, unsigned long *flags)
 {
-	return syscall(__NR_get_scribe_flags);
+	return syscall(__NR_get_scribe_flags, pid, flags);
 }
 
-int set_scribe_flags(int flags)
+static int set_scribe_flags(pid_t pid, int flags, int duration)
 {
-	return syscall(__NR_set_scribe_flags, flags);
+	return syscall(__NR_set_scribe_flags, pid, flags, duration);
 }
 
 int scribe_is_recording(void)
 {
-	int flags = get_scribe_flags();
-	if (flags == -1)
+	unsigned long flags;
+	if (get_scribe_flags(0, &flags) < 0)
 		return 0;
 	return flags & SCRIBE_PS_RECORD;
 }
 
 int scribe_is_replaying(void)
 {
-	int flags = get_scribe_flags();
-	if (flags == -1)
+	unsigned long flags;
+	if (get_scribe_flags(0, &flags) < 0)
 		return 0;
 	return flags & SCRIBE_PS_REPLAY;
 }
 
 int scribe_disable(void)
 {
-	return set_scribe_flags(0) < 0 ? -1 : 0;
+	return set_scribe_flags(0, 0, SCRIBE_PERMANANT);
 }
 
 int scribe_enable(void)
 {
-	return set_scribe_flags(SCRIBE_PS_ENABLE_ALL) < 0 ? -1 : 0;
+	return set_scribe_flags(0, SCRIBE_PS_ENABLE_ALL, SCRIBE_PERMANANT);
 }
