@@ -77,8 +77,8 @@
 #define SCRIBE_PS_ENABLE_TSC		0x00001000
 #define SCRIBE_PS_ENABLE_MM		0x00002000
 #define SCRIBE_PS_ENABLE_RET_CHECK	0x00004000
+#define SCRIBE_PS_ENABLE_STRICT_RPY	0x00008000
 #define SCRIBE_PS_ENABLE_ALL		0x0000ff00
-#define SCRIBE_PS_MUTABLE		0x10000000
 
 /*
  * These flags are used as a data type
@@ -91,8 +91,18 @@
 #define SCRIBE_DATA_ZERO		0x10
 #define SCRIBE_DATA_NEED_INFO		0x20
 
+/*
+ * Bookmark types
+ */
 #define SCRIBE_BOOKMARK_PRE_SYSCALL	0x00
 #define SCRIBE_BOOKMARK_POST_SYSCALL	0x01
+
+
+/*
+ * Duration arguments
+ */
+#define SCRIBE_PERMANANT		0x00
+#define SCRIBE_UNTIL_NEXT_SYSCALL	0x01
 
 /*
  * Syscalls offsets for multiplexed calls
@@ -160,6 +170,7 @@ struct scribe_event_diverge {
 	struct scribe_event h;
 	__u32 pid;
 	__u32 fatal;
+	__u32 num_ev_consumed;
 	__u64 last_event_offset;
 } __attribute__((packed));
 

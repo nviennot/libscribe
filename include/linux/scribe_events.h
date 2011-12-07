@@ -205,6 +205,11 @@ SCRIBE_EVENT(sig_handled,
 	__field(__u8, nr)
 )
 
+SCRIBE_EVENT(set_flags,
+	__field(__u32, flags)
+	__field(__u8, duration)
+)
+
 /* Command events */
 SCRIBE_START_COMMAND_DECL
 
@@ -303,6 +308,8 @@ SCRIBE_EVENT_DIVERGE(mem_not_owned)
 SCRIBE_EVENT_DIVERGE(regs,
 	__field(struct pt_regs, regs)
 )
+
+SCRIBE_EVENT_DIVERGE(queue_not_empty)
 
 #undef __header_regular
 #undef __header_sized

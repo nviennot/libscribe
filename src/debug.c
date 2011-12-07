@@ -414,6 +414,13 @@ static char *get_res_desc(char *buf, size_t buf_size,
 	return buf;
 }
 
+static char *get_duration_str(char *buf, int duration)
+{
+	if (duration == SCRIBE_UNTIL_NEXT_SYSCALL)
+		return "until next syscall";
+	return "permanently";
+}
+
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
@@ -498,6 +505,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "signal handled, cookie = %u", e->cookie);
 	__TYPE(SCRIBE_EVENT_SIG_HANDLED,
 	       "signal handled, signal = %s", get_signal_str(buffer1, e->nr));
+	__TYPE(SCRIBE_EVENT_SET_FLAGS,
+	       "set flags = %08x, duration = %s",
+	       e->flags, get_duration_str(buffer1, e->duration));
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
@@ -553,6 +563,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "memory address, page not owned");
 	__TYPE(SCRIBE_EVENT_DIVERGE_REGS, "regs: %s",
 	       get_regs_str(buffer1, sizeof(buffer1), &e->regs));
+	__TYPE(SCRIBE_EVENT_DIVERGE_QUEUE_NOT_EMPTY,
+	       "queue not empty");
 #undef __TYPE
 
 	snprintf(str, size, "unkown event %d", event->type);
