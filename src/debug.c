@@ -421,6 +421,19 @@ static char *get_duration_str(char *buf, int duration)
 	return "permanently";
 }
 
+static char *get_set_flags_str(char *buf, int flags, int duration)
+{
+	char tmp[100];
+	if (flags == 0 && duration == SCRIBE_UNTIL_NEXT_SYSCALL)
+		return "ignore syscall";
+	else  {
+		sprintf(buf, "set flags = %08x, duration = %s",
+			       flags, get_duration_str(tmp, duration));
+		return buf;
+	}
+}
+
+
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
@@ -505,9 +518,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "signal handled, cookie = %u", e->cookie);
 	__TYPE(SCRIBE_EVENT_SIG_HANDLED,
 	       "signal handled, signal = %s", get_signal_str(buffer1, e->nr));
-	__TYPE(SCRIBE_EVENT_SET_FLAGS,
-	       "set flags = %08x, duration = %s",
-	       e->flags, get_duration_str(buffer1, e->duration));
+	__TYPE(SCRIBE_EVENT_SET_FLAGS, "%s",
+	       get_set_flags_str(buffer1, e->flags, e->duration));
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,
