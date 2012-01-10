@@ -414,23 +414,34 @@ static char *get_res_desc(char *buf, size_t buf_size,
 	return buf;
 }
 
-static char *get_duration_str(char *buf, int duration)
+static char *get_duration_str(int duration)
 {
 	if (duration == SCRIBE_UNTIL_NEXT_SYSCALL)
 		return "until next syscall";
 	return "permanently";
 }
 
-static char *get_set_flags_str(char *buf, int flags, int duration)
+static char *get_set_flags_str(char *buf, size_t buf_size, int flags,
+			       int duration, struct scribe_event *extra)
 {
-	char tmp[100];
-	if (flags == 0 && duration == SCRIBE_UNTIL_NEXT_SYSCALL)
-		return "ignore syscall";
-	else  {
-		sprintf(buf, "set flags = %08x, duration = %s",
-			       flags, get_duration_str(tmp, duration));
-		return buf;
+	char *orig_buf = buf;
+	int s;
+
+	if (flags == 0 && duration == SCRIBE_UNTIL_NEXT_SYSCALL) {
+		if (extra)
+			s = snprintf(buf, buf_size, "%s", "new: ");
+		else
+			s = snprintf(buf, buf_size, "%s", "ignore syscall");
+	} else {
+		s = snprintf(buf, buf_size, "set flags = %08x, duration = %s",
+			     flags, get_duration_str(duration));
 	}
+	buf += s;
+	buf_size -= s;
+
+	if (extra)
+		scribe_get_event_str(buf, buf_size, extra);
+	return orig_buf;
 }
 
 
@@ -519,7 +530,8 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_SIG_HANDLED,
 	       "signal handled, signal = %s", get_signal_str(buffer1, e->nr));
 	__TYPE(SCRIBE_EVENT_SET_FLAGS, "%s",
-	       get_set_flags_str(buffer1, e->flags, e->duration));
+	       get_set_flags_str(buffer1, sizeof(buffer1), e->flags, e->duration,
+				 e->h.size ? (struct scribe_event *)e->extra : NULL));
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,

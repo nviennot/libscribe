@@ -205,9 +205,10 @@ SCRIBE_EVENT(sig_handled,
 	__field(__u8, nr)
 )
 
-SCRIBE_EVENT(set_flags,
+SCRIBE_EVENT_SIZED(set_flags,
 	__field(__u32, flags)
 	__field(__u8, duration)
+	__field(__u8, extra[0])
 )
 
 /* Command events */
