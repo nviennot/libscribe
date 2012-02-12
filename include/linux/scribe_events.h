@@ -160,11 +160,13 @@ SCRIBE_EVENT(mem_owned_write,
 )
 
 SCRIBE_EVENT(mem_owned_read_extra,
+	__field(__u32, id)
 	__field(__u32, address)
 	__field(__u32, serial)
 )
 
 SCRIBE_EVENT(mem_owned_write_extra,
+	__field(__u32, id)
 	__field(__u32, address)
 	__field(__u32, serial)
 )

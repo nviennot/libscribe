@@ -505,11 +505,11 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_MEM_OWNED_WRITE,
 	       "mem owned, serial = %u", e->serial);
 	__TYPE(SCRIBE_EVENT_MEM_OWNED_READ_EXTRA,
-	       "mem owned read-only, page = %08x, serial = %u",
-	       e->address, e->serial);
+	       "mem owned read-only, id = %u, page = %08x, serial = %u",
+	       e->id, e->address, e->serial);
 	__TYPE(SCRIBE_EVENT_MEM_OWNED_WRITE_EXTRA,
-	       "mem owned, page = %08x, serial = %u",
-	       e->address, e->serial);
+	       "mem owned, id = %u, page = %08x, serial = %u",
+	       e->id, e->address, e->serial);
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_READ,
 	       "mem public read-only, page = %08x", e->address);
 	__TYPE(SCRIBE_EVENT_MEM_PUBLIC_WRITE,
