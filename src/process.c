@@ -24,15 +24,27 @@
 
 #define __NR_get_scribe_flags	339
 #define __NR_set_scribe_flags	340
+#define __NR_scribe_send_event	341
+#define __NR_scribe_recv_event	342
 
-static int get_scribe_flags(pid_t pid, unsigned long *flags)
+int get_scribe_flags(pid_t pid, unsigned long *flags)
 {
 	return syscall(__NR_get_scribe_flags, pid, flags);
 }
 
-static int set_scribe_flags(pid_t pid, int flags, int duration)
+int set_scribe_flags(pid_t pid, int flags, int duration)
 {
 	return syscall(__NR_set_scribe_flags, pid, flags, duration);
+}
+
+int scribe_send_event(const struct scribe_event *uevent)
+{
+	return syscall(__NR_scribe_send_event, uevent);
+}
+
+int scribe_recv_event(struct scribe_event *uevent, size_t size)
+{
+	return syscall(__NR_scribe_recv_event, uevent, size);
 }
 
 int scribe_is_recording(void)

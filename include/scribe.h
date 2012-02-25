@@ -120,6 +120,8 @@ int scribe_is_recording(void);
 int scribe_is_replaying(void);
 int scribe_disable(void);
 int scribe_enable(void);
+int scribe_send_event(const struct scribe_event *uevent);
+int scribe_recv_event(struct scribe_event *uevent, size_t size);
 
 static inline void clear_regs(void)
 {
