@@ -522,10 +522,18 @@ int scribe_wait(scribe_context_t ctx)
 
 	char buffer[1024];
 	struct scribe_event *e = (struct scribe_event *)buffer;
+	int dev = ctx->dev;
+
+	/*
+	 * When we call a callback, we don't assume that ctx is valid anymore,
+	 * hence the caching of dev, and we hope to return EBADF.
+	 * XXX In some cases, the file descriptor can still be valid if the
+	 * caller closed the context and opened something else...
+	 */
 
 	for (;;) {
 		/* Events arrive one by one */
-		if (read(ctx->dev, buffer, sizeof(buffer)) < 0)
+		if (read(dev, buffer, sizeof(buffer)) < 0)
 			return -2;
 
 		if (e->type == SCRIBE_EVENT_BACKTRACE) {
@@ -536,6 +544,8 @@ int scribe_wait(scribe_context_t ctx)
 				ctx->ops->on_backtrace(ctx->private_data,
 						       ctx->backtrace,
 						       backtrace_len);
+				backtrace_len = 0;
+				continue;
 			}
 			backtrace_len = 0;
 		}
@@ -545,6 +555,7 @@ int scribe_wait(scribe_context_t ctx)
 			struct scribe_event_bookmark_reached *bev = (void*)e;
 			ctx->ops->on_bookmark(ctx->private_data,
 					      bev->id, bev->npr);
+			continue;
 		}
 
 		if (e->type == SCRIBE_EVENT_ON_ATTACH &&
@@ -552,11 +563,13 @@ int scribe_wait(scribe_context_t ctx)
 			struct scribe_event_on_attach *oaev = (void*)e;
 			ctx->ops->on_attach(ctx->private_data,
 					    oaev->real_pid, oaev->scribe_pid);
+			continue;
 		}
 
 		if (is_diverge_type(e->type) && ctx->ops && ctx->ops->on_diverge) {
 			ctx->ops->on_diverge(ctx->private_data,
 					     (struct scribe_event_diverge *)e);
+			continue;
 		}
 
 		if (e->type == SCRIBE_EVENT_CONTEXT_IDLE) {
