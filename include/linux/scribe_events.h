@@ -110,9 +110,10 @@ SCRIBE_EVENT(syscall,
 	__field(__s32, ret)
 )
 
-SCRIBE_EVENT(syscall_extra,
-	__field(__s32, ret) /* FIXME 64 bit support ? */
+SCRIBE_EVENT_SIZED(syscall_extra,
+	__field(__s32, ret)
 	__field(__u16, nr)
+	__field(__u32, args[0])
 )
 
 SCRIBE_EVENT(syscall_end)
@@ -291,6 +292,8 @@ SCRIBE_EVENT_DIVERGE(resource_type,
 
 SCRIBE_EVENT_DIVERGE(syscall,
 	__field(__u16, nr)
+	__field(__u8, num_args)
+	__field(__u32, args[6])
 )
 
 SCRIBE_EVENT_DIVERGE(syscall_ret,

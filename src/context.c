@@ -544,8 +544,6 @@ int scribe_wait(scribe_context_t ctx)
 				ctx->ops->on_backtrace(ctx->private_data,
 						       ctx->backtrace,
 						       backtrace_len);
-				backtrace_len = 0;
-				continue;
 			}
 			backtrace_len = 0;
 		}

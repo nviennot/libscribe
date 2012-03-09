@@ -18,6 +18,7 @@
 
 #define _GNU_SOURCE
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <error.h>
@@ -26,6 +27,8 @@
 
 #include <linux/types.h>
 #include <scribe.h>
+
+#define PAGE_SIZE 4096
 
 #define GET_STR(table, n) ({ 				\
 	char *str;					\
@@ -132,6 +135,28 @@ static char *get_syscall_str(char *buffer, unsigned int n)
 
 	sprintf(buffer, "syscall_%d", n);
 	return buffer;
+}
+
+static char *get_syscall_args(char *buffer, unsigned long *args, int num_args)
+{
+	char *orig_buffer = buffer;
+	const char *fmt;
+	int i;
+
+	buffer[0] = 0;
+	for (i = 0; i < num_args; i++) {
+		if (abs((int)args[i]) < PAGE_SIZE)
+			fmt = "%ld";
+		else if (!(args[i] & 0xfff00000))
+			fmt = "%lx";
+		else
+			fmt = "%p";
+		buffer += sprintf(buffer, fmt, args[i]);
+		if (i != num_args-1)
+			buffer += sprintf(buffer, ", ");
+	}
+
+	return orig_buffer;
 }
 
 static char *error_str[] = {
@@ -449,6 +474,7 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
 	char buffer1[4096];
 	char buffer2[4096];
+	char buffer3[4096];
 
 #define DECL_EVENT(t) struct##t *e __attribute__((__unused__)) = \
 	(struct##t *)event
@@ -478,9 +504,11 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       escape_str(buffer2, 100, e->data, e->h.size));
 	__TYPE(SCRIBE_EVENT_SYSCALL, "syscall() = %s",
 	       get_ret_str(buffer2, e->ret));
-	__TYPE(SCRIBE_EVENT_SYSCALL_EXTRA, "%s() = %s",
+	__TYPE(SCRIBE_EVENT_SYSCALL_EXTRA, "%s(%s) = %s",
 	       get_syscall_str(buffer1, e->nr),
-	       get_ret_str(buffer2, e->ret));
+	       get_syscall_args(buffer2, (unsigned long *)e->args,
+				e->h.size/sizeof(unsigned long)),
+	       get_ret_str(buffer3, e->ret));
 	__TYPE(SCRIBE_EVENT_SYSCALL_END, "syscall ended");
 	__TYPE(SCRIBE_EVENT_QUEUE_EOF, "queue EOF");
 	__TYPE(SCRIBE_EVENT_RESOURCE_LOCK,
@@ -574,7 +602,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	       "resource type = %s",
 	       get_res_type_str(buffer1, sizeof(buffer1), e->type));
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL,
-	       "%s()", get_syscall_str(buffer1, e->nr));
+	       "%s(%s)", get_syscall_str(buffer1, e->nr),
+	       get_syscall_args(buffer2, (unsigned long *)e->args, e->num_args));
+
 	__TYPE(SCRIBE_EVENT_DIVERGE_SYSCALL_RET,
 	       "syscall return value = %s",
 	       get_ret_str(buffer1, e->ret));
