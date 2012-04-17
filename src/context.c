@@ -36,6 +36,15 @@
 #include <signal.h>
 #include <limits.h>
 #include <scribe.h>
+#include <list.h>
+
+struct mutation {
+	struct list_head node;
+	int pid;
+	size_t total_size;
+	size_t index;
+	char *events;
+};
 
 struct scribe_context {
 	int dev;
@@ -43,6 +52,8 @@ struct scribe_context {
 	struct scribe_operations *ops;
 	void *private_data;
 	loff_t *backtrace;
+	struct list_head mutations;
+	struct mutation *current_mutation;
 };
 
 #define SCRIBE_DEV_PATH "/dev/" SCRIBE_DEVICE_NAME
@@ -66,6 +77,9 @@ int scribe_context_create(scribe_context_t *pctx, struct scribe_operations *ops,
 	ctx->mode = 0;
 	ctx->ops = ops;
 	ctx->private_data = private_data;
+
+	INIT_LIST_HEAD(&ctx->mutations);
+	ctx->current_mutation = NULL;
 
 	*pctx = ctx;
 	return 0;
@@ -516,11 +530,116 @@ pid_t scribe_replay(scribe_context_t ctx, int flags, int log_fd,
 	return ret;
 }
 
+static int mutation_realloc(struct mutation *mutation, size_t size_needed)
+{
+	size_t remaining = mutation->total_size - mutation->index;
+	size_t new_size;
+	void *ptr;
+
+	if (remaining >= size_needed)
+		return 0;
+
+	new_size = 2*(mutation->total_size + size_needed);
+	ptr = realloc(mutation->events, new_size);
+	if (ptr == NULL)
+		return -1;
+
+	mutation->total_size = new_size;
+	mutation->events = ptr;
+	return 0;
+}
+
+static struct mutation *find_mutation(scribe_context_t ctx, int pid)
+{
+	struct mutation *mutation;
+
+	list_for_each_entry(mutation, &ctx->mutations, node)
+		if (mutation->pid == pid)
+			return mutation;
+	return NULL;
+}
+
+static struct mutation *alloc_mutation(scribe_context_t ctx, int pid)
+{
+	struct mutation *mutation;
+
+	mutation = find_mutation(ctx, pid);
+	if (mutation)
+		return mutation;
+
+	mutation = malloc(sizeof(*mutation));
+	if (!mutation)
+		return NULL;
+
+	mutation->pid = pid;
+	mutation->total_size = 0;
+	mutation->index = 0;
+	mutation->events = NULL;
+
+	list_add(&mutation->node, &ctx->mutations);
+
+	return mutation;
+}
+
+static void free_mutation(struct mutation *mutation)
+{
+	list_del(&mutation->node);
+	free(mutation->events);
+	free(mutation);
+}
+
+static int handle_mutation(scribe_context_t ctx, struct scribe_event *e)
+{
+	struct mutation *mutation;
+	size_t event_size;
+
+	if (e->type == SCRIBE_EVENT_PID) {
+		struct scribe_event_pid *pev = (void*)e;
+
+		errno = -EINVAL;
+		if (ctx->current_mutation)
+			return -1;
+
+		mutation = alloc_mutation(ctx, pev->pid);
+		if (!mutation)
+			return -1;
+
+		ctx->current_mutation = mutation;
+		return 0;
+	}
+
+	mutation = ctx->current_mutation;
+
+	if (e->type == SCRIBE_EVENT_QUEUE_EOF) {
+		errno = -EINVAL;
+		if (!mutation)
+			return -1;
+
+		/* Will be dumped when we receive the diverge event */
+		ctx->current_mutation = NULL;
+
+		return 0;
+	}
+
+	mutation = ctx->current_mutation;
+	if (!mutation)
+		return 0;
+
+	event_size = sizeof_event(e);
+	if (mutation_realloc(mutation, event_size) < 0)
+		return -2;
+
+	memcpy(&mutation->events[mutation->index], e, event_size);
+	mutation->index += event_size;
+
+	return 0;
+}
+
 int scribe_wait(scribe_context_t ctx)
 {
 	int backtrace_len = 0;
 
-	char buffer[1024];
+	char buffer[4096];
 	struct scribe_event *e = (struct scribe_event *)buffer;
 	int dev = ctx->dev;
 
@@ -534,6 +653,9 @@ int scribe_wait(scribe_context_t ctx)
 	for (;;) {
 		/* Events arrive one by one */
 		if (read(dev, buffer, sizeof(buffer)) < 0)
+			return -2;
+
+		if (handle_mutation(ctx, e))
 			return -2;
 
 		if (e->type == SCRIBE_EVENT_BACKTRACE) {
@@ -565,8 +687,22 @@ int scribe_wait(scribe_context_t ctx)
 		}
 
 		if (is_diverge_type(e->type) && ctx->ops && ctx->ops->on_diverge) {
-			ctx->ops->on_diverge(ctx->private_data,
-					     (struct scribe_event_diverge *)e);
+			struct scribe_event_diverge *de = (void*)e;
+			struct mutation *mutation = find_mutation(ctx, de->pid);
+			size_t size = 0;
+			void *events = NULL;
+
+			if (mutation) {
+				size = mutation->index;
+				events = mutation->events;
+			}
+
+			ctx->ops->on_diverge(ctx->private_data, de,
+					     events, size);
+
+			if (mutation)
+				free_mutation(mutation);
+
 			continue;
 		}
 
