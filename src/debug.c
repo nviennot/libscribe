@@ -469,6 +469,23 @@ static char *get_set_flags_str(char *buf, size_t buf_size, int flags,
 	return orig_buf;
 }
 
+static char *get_nop_str(char *buf, size_t buf_size, struct scribe_event *extra)
+{
+	char *orig_buf = buf;
+	int s;
+
+	if (extra)
+		s = snprintf(buf, buf_size, "%s", "new: ");
+	else
+		s = snprintf(buf, buf_size, "%s", "nop");
+
+	buf += s;
+	buf_size -= s;
+
+	if (extra)
+		scribe_get_event_str(buf, buf_size, extra);
+	return orig_buf;
+}
 
 char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 {
@@ -560,6 +577,9 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event)
 	__TYPE(SCRIBE_EVENT_SET_FLAGS, "%s",
 	       get_set_flags_str(buffer1, sizeof(buffer1), e->flags, e->duration,
 				 e->h.size ? (struct scribe_event *)e->extra : NULL));
+	__TYPE(SCRIBE_EVENT_NOP, "%s",
+	       get_nop_str(buffer1, sizeof(buffer1),
+			   e->h.size ? (struct scribe_event *)e->extra : NULL));
 
 
 	__TYPE(SCRIBE_EVENT_ATTACH_ON_EXECVE,

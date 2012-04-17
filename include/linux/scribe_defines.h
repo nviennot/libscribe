@@ -61,6 +61,8 @@
 #define structSCRIBE_EVENT_SIG_HANDLED struct scribe_event_sig_handled
 #define upperscribe_event_set_flags SCRIBE_EVENT_SET_FLAGS
 #define structSCRIBE_EVENT_SET_FLAGS struct scribe_event_set_flags
+#define upperscribe_event_nop SCRIBE_EVENT_NOP
+#define structSCRIBE_EVENT_NOP struct scribe_event_nop
 #define upperscribe_event_attach_on_execve SCRIBE_EVENT_ATTACH_ON_EXECVE
 #define structSCRIBE_EVENT_ATTACH_ON_EXECVE struct scribe_event_attach_on_execve
 #define upperscribe_event_record SCRIBE_EVENT_RECORD
