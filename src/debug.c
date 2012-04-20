@@ -347,8 +347,10 @@ static char *get_diverge_data_str(char *buf, ssize_t buf_size, int offset,
 	if (offset > buf_size/2)
 		return escape_str(buf, buf_size, data, data_size);
 
-	if (data_size > 2*sizeof(long))
-		data_size -= (offset + data_size) % sizeof(long);
+	/* XXX Have no clue what this does. */
+	/*if (data_size > 2*sizeof(long))*/
+		/*data_size -= (offset + data_size) % sizeof(long);*/
+	/* XXX Look at this again with a fresh brain */
 
 	memcpy(dbuf+offset, data, data_size);
 
