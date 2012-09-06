@@ -22,10 +22,10 @@
 #include <unistd.h>
 #include <scribe.h>
 
-#define __NR_get_scribe_flags	339
-#define __NR_set_scribe_flags	340
-#define __NR_scribe_send_event	341
-#define __NR_scribe_recv_event	342
+#define __NR_get_scribe_flags	401
+#define __NR_set_scribe_flags	402
+#define __NR_scribe_send_event	403
+#define __NR_scribe_recv_event	404
 
 int get_scribe_flags(pid_t pid, unsigned long *flags)
 {
