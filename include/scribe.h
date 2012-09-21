@@ -123,6 +123,9 @@ int scribe_disable(void);
 int scribe_enable(void);
 int scribe_send_event(const struct scribe_event *uevent);
 int scribe_recv_event(struct scribe_event *uevent, size_t size);
+int scribe_filter_syscall(int nr, int enable);
+int scribe_disable_syscall(int nr);
+int scribe_enable_syscall(int nr);
 
 static inline void clear_regs(void)
 {

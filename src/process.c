@@ -22,10 +22,11 @@
 #include <unistd.h>
 #include <scribe.h>
 
-#define __NR_get_scribe_flags	401
-#define __NR_set_scribe_flags	402
-#define __NR_scribe_send_event	403
-#define __NR_scribe_recv_event	404
+#define __NR_get_scribe_flags		401
+#define __NR_set_scribe_flags		402
+#define __NR_scribe_send_event		403
+#define __NR_scribe_recv_event		404
+#define __NR_scribe_filter_syscall	405
 
 int get_scribe_flags(pid_t pid, unsigned long *flags)
 {
@@ -45,6 +46,11 @@ int scribe_send_event(const struct scribe_event *uevent)
 int scribe_recv_event(struct scribe_event *uevent, size_t size)
 {
 	return syscall(__NR_scribe_recv_event, uevent, size);
+}
+
+int scribe_filter_syscall(int nr, int enable)
+{
+	return syscall(__NR_scribe_filter_syscall, nr, enable);
 }
 
 int scribe_is_recording(void)
@@ -71,4 +77,14 @@ int scribe_disable(void)
 int scribe_enable(void)
 {
 	return set_scribe_flags(0, SCRIBE_PS_ENABLE_ALL, SCRIBE_PERMANANT);
+}
+
+int scribe_disable_syscall(int nr)
+{
+	return scribe_filter_syscall(nr, 0);
+}
+
+int scribe_enable_syscall(int nr)
+{
+	return scribe_filter_syscall(nr, 1);
 }
