@@ -109,10 +109,10 @@ static char *syscall_str[] = {
 };
 
 static char *syscall_socketcall_str[] = {
-	"socket", "bind", "connect", "listen", "accept", "getsockname",
-	"getpeername", "socketpair", "send", "recv", "sendto", "recvfrom",
-	"shutdown", "setsockopt", "getsockopt", "sendmsg", "recvmsg",
-	"accept4", "recvmmsg2"
+	"reserved", "socket", "bind", "connect", "listen", "accept",
+	"getsockname", "getpeername", "socketpair", "send", "recv", "sendto",
+	"recvfrom", "shutdown", "setsockopt", "getsockopt", "sendmsg",
+	"recvmsg", "accept4", "recvmmsg2"
 };
 
 static char *syscall_futex_str[] = {
@@ -128,9 +128,9 @@ static char *get_syscall_str(char *buffer, unsigned int n)
 
 	if ((str = GET_STR(syscall, n)))
 		return str;
-	if ((str = GET_STR(syscall_socketcall, n - SCRIBE_SOCKETCALL_BASE - 1)))
+	if ((str = GET_STR(syscall_socketcall, n - SCRIBE_SOCKETCALL_FIRST)))
 		return str;
-	if ((str = GET_STR(syscall_futex, n - SCRIBE_FUTEX_BASE)))
+	if ((str = GET_STR(syscall_futex, n - SCRIBE_FUTEX_FIRST)))
 		return str;
 
 	sprintf(buffer, "syscall_%d", n);

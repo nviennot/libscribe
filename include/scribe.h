@@ -117,8 +117,12 @@ char *scribe_get_event_str(char *str, size_t size, struct scribe_event *event);
 
 
 /* Scribed process specific */
+int get_scribe_flags(pid_t pid, unsigned long *flags);
+int set_scribe_flags(pid_t pid, int flags, int duration);
 int scribe_is_recording(void);
 int scribe_is_replaying(void);
+int scribe_disable_only(void);
+int scribe_enable(void);
 int scribe_disable(void);
 int scribe_enable(void);
 int scribe_send_event(const struct scribe_event *uevent);
